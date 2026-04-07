@@ -5,6 +5,9 @@ import math
 from pathlib import Path
 from typing import Iterable
 
+DEFAULT_BOX_SPEC_MM = (1000.0, 1000.0)
+DEFAULT_BOX_HEIGHT_MM = 500.0
+
 
 def _normalize_text(value: str) -> str:
     return value.strip()
@@ -39,7 +42,10 @@ def _parse_spec_mm(spec: str) -> tuple[float, float] | None:
 def _calculate_unit_volume_m3(spec: str, thickness: str) -> float | None:
     dimensions = _parse_spec_mm(spec)
     thickness_mm = _parse_number(thickness)
-    if dimensions is None or thickness_mm is None:
+    if dimensions is None:
+        width_mm, length_mm = DEFAULT_BOX_SPEC_MM
+        return (width_mm * length_mm * DEFAULT_BOX_HEIGHT_MM) / 1_000_000_000
+    if thickness_mm is None:
         return None
 
     width_mm, length_mm = dimensions
