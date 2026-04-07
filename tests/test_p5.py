@@ -1,0 +1,55 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+SRC_DIR = ROOT_DIR / "src"
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from risk_evaluator import evaluate_risk
+
+
+def test_T02_overweight() -> None:
+    result = evaluate_risk({"weight_ratio_pct": 101.0})
+    assert result["final_level"] == "Critical"
+
+
+def test_T03_axle() -> None:
+    result = evaluate_risk({"axle_overload_critical": True})
+    assert result["final_level"] == "Critical"
+
+
+def test_T04_front_rear() -> None:
+    result = evaluate_risk({"front_rear_deviation_pct": 35.0})
+    assert result["final_level"] == "Critical"
+
+
+def test_T05_left_right() -> None:
+    result = evaluate_risk({"left_right_deviation_pct": 15.0})
+    assert result["category_levels"]["left_right_deviation"] == "Caution"
+    assert result["final_level"] == "Caution"
+
+
+def test_T06_fragile_bottom() -> None:
+    result = evaluate_risk({"fragile_bottom_pressure": True})
+    assert result["category_levels"]["fragile_bottom_pressure"] == "Danger"
+    assert result["final_level"] == "Danger"
+
+
+def test_T07_all_safe() -> None:
+    result = evaluate_risk(
+        {
+            "weight_ratio_pct": 80.0,
+            "axle_overload_critical": False,
+            "volume_ratio_pct": 60.0,
+            "front_rear_deviation_pct": 8.0,
+            "left_right_deviation_pct": 5.0,
+            "top_share_pct": 20.0,
+            "fragile_bottom_pressure": False,
+        }
+    )
+    assert result["final_level"] == "Safe"

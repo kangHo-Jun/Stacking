@@ -1,0 +1,9 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/zart/Library/Mobile Documents/com~apple~CloudDocs/프로젝트/적재시스템/project
+plugins: anyio-4.12.1
+collected 5 items
+
+tests/test_p1.py .....                                                   [100%]
+
+============================== 5 passed in 0.02s ===============================
