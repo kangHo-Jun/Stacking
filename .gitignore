@@ -4,3 +4,4 @@ __pycache__/
 data/history.db
 output/
 .env
+.DS_Store

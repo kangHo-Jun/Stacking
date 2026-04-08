@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/zart/Library/Mobile Documents/com~apple~CloudDocs/프로젝트/적재시스템/project
+plugins: anyio-4.12.1
+collected 34 items
+
+tests/test_main.py ...                                                   [  8%]
+tests/test_p1.py .....                                                   [ 23%]
+tests/test_p2.py .....                                                   [ 38%]
+tests/test_p3.py ......                                                  [ 55%]
+tests/test_p4.py .....                                                   [ 70%]
+tests/test_p5.py ......                                                  [ 88%]
+tests/test_p6.py ....                                                    [100%]
+
+=============================== warnings summary ===============================
+<frozen importlib._bootstrap>:228
+  <frozen importlib._bootstrap>:228: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:228
+  <frozen importlib._bootstrap>:228: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:228
+  <frozen importlib._bootstrap>:228: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 34 passed, 3 warnings in 0.49s ========================

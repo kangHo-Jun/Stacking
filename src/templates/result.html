@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>시뮬레이션 결과</title>
+  <style>
+    :root {
+      --bg: #f3f6f8;
+      --ink: #132030;
+      --muted: #5a6878;
+      --panel: #ffffff;
+      --border: rgba(19,32,48,.1);
+      --shadow: 0 20px 45px rgba(19,32,48,.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Pretendard", sans-serif;
+      background:
+        linear-gradient(180deg, rgba(19,32,48,0.95), rgba(19,32,48,0.75)),
+        linear-gradient(120deg, #f7fbfd, #ecf2f3);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    .shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+    }
+    .bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      color: white;
+      margin-bottom: 22px;
+    }
+    .bar a {
+      color: white;
+      text-decoration: none;
+      padding: 12px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
+    }
+    .hero, .grid, .placements { display: grid; gap: 18px; }
+    .hero { grid-template-columns: 1.2fr .8fr; }
+    .grid { grid-template-columns: repeat(3, 1fr); margin-top: 18px; }
+    .panel {
+      background: var(--panel);
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+    .headline {
+      background: linear-gradient(135deg, #fff, #eef6f7);
+    }
+    .risk-chip {
+      display: inline-flex;
+      padding: 10px 14px;
+      border-radius: 999px;
+      color: white;
+      font-weight: 700;
+      letter-spacing: .02em;
+      background: {{ risk_color(payload["위험도"]) }};
+    }
+    h1, h2, h3 { margin: 0; }
+    p { margin: 8px 0 0; color: var(--muted); line-height: 1.6; }
+    .stat strong { display: block; font-size: 1.6rem; margin-top: 10px; }
+    .stat span { color: var(--muted); font-size: .9rem; }
+    .manual {
+      font-size: 1.05rem;
+      line-height: 1.75;
+    }
+    .placements ul, .risk-list { list-style: none; padding: 0; margin: 0; }
+    .placements li, .risk-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .placements li:last-child, .risk-list li:last-child { border-bottom: 0; }
+    .subtle { color: var(--muted); font-size: .92rem; }
+    @media (max-width: 900px) {
+      .hero, .grid { grid-template-columns: 1fr; }
+      .bar { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="bar">
+      <div>
+        <div class="subtle">출고일시</div>
+        <strong>{{ created_at }}</strong>
+      </div>
+      {% if not pdf_mode %}
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a href="{{ url_for('index') }}">새 시뮬레이션</a>
+          <a href="{{ url_for('history') }}">이력 보기</a>
+          <a href="{{ url_for('download_pdf', history_id=history_id) }}">PDF 다운로드</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <section class="hero">
+      <div class="panel headline">
+        <div class="risk-chip">{{ payload["위험도"] }}</div>
+        <h1 style="margin-top:14px;">{{ payload["차량"] }}</h1>
+        <p>선택 차량과 적재 위험도를 기준으로 현장 출고 판단을 정리한 결과입니다.</p>
+        <div class="manual" style="margin-top:18px;">{{ payload["현장매뉴얼"] }}</div>
+      </div>
+      <div class="panel">
+        <h2>요약</h2>
+        <ul class="risk-list" style="margin-top:12px;">
+          <li><span>총 운임</span><strong>{{ payload["총운임"] }}원</strong></li>
+          <li><span>총 중량</span><strong>{{ payload["총중량"] }}kg</strong></li>
+          <li><span>팔레트 수</span><strong>{{ payload["팔레트수"] }}</strong></li>
+          <li><span>혼적 위반</span><strong>{{ payload["혼적위반"] }}</strong></li>
+          <li><span>축중 초과</span><strong>{{ payload["축중초과"] }}</strong></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel stat">
+        <span>전후 편차</span>
+        <strong>{{ payload["편차"]["전후"] }}%</strong>
+      </div>
+      <div class="panel stat">
+        <span>좌우 편차</span>
+        <strong>{{ payload["편차"]["좌우"] }}%</strong>
+      </div>
+      <div class="panel stat">
+        <span>상단 비중</span>
+        <strong>{{ payload["편차"]["상단비중"] }}%</strong>
+      </div>
+    </section>
+
+    <section class="grid" style="grid-template-columns: 1.1fr .9fr; margin-top:18px;">
+      <div class="panel placements">
+        <h2>팔레트 순서</h2>
+        <ul style="margin-top:12px;">
+          {% if vehicle_sections %}
+            {% for section in vehicle_sections %}
+              <li>
+                <span>{{ section["인스턴스"] or section["차량"] }}</span>
+                <span class="subtle">{{ section["팔레트수"] }} pallets / {{ section["총중량"] }}kg</span>
+              </li>
+            {% endfor %}
+          {% elif placements %}
+            {% for item in placements %}
+              <li>
+                <span>{{ loop.index }}. {{ item.material_key }}</span>
+                <span class="subtle">{{ item.longitudinal_zone }} / {{ item.lateral_zone }} / {{ item.vertical_zone }}</span>
+              </li>
+            {% endfor %}
+          {% else %}
+            <li><span>저장된 결과 PDF 출력용 화면입니다.</span></li>
+          {% endif %}
+        </ul>
+      </div>
+      <div class="panel">
+        <h2>항목별 위험도</h2>
+        <ul class="risk-list" style="margin-top:12px;">
+          {% for label, level in payload["항목별위험도"].items() %}
+            <li>
+              <span>{{ label }}</span>
+              <strong style="color: {{ risk_color(level) }}">{{ level }}</strong>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    {% if vehicle_sections %}
+      <section class="grid" style="grid-template-columns: 1fr; margin-top:18px;">
+        {% for section in vehicle_sections %}
+          <div class="panel">
+            <h2>{{ section["인스턴스"] or section["차량"] }}</h2>
+            <p>중량 {{ section["총중량"] }}kg / 팔레트 {{ section["팔레트수"] }} / 위험도 <strong style="color: {{ risk_color(section['위험도']) }}">{{ section["위험도"] }}</strong></p>
+            <ul class="risk-list" style="margin-top:12px;">
+              {% for pallet in section["팔레트순서"] %}
+                <li>
+                  <span>{{ loop.index }}. {{ pallet }}</span>
+                  <span class="subtle">{{ section["차량"] }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      </section>
+    {% endif %}
+  </div>
+</body>
+</html>
