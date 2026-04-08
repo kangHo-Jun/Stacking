@@ -1,51 +1,39 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
+import math
 
 import pytest
 
-
-ROOT_DIR = Path(__file__).resolve().parents[1]
-SRC_DIR = ROOT_DIR / "src"
-
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
-from input_parser import load_material_db, process_orders
+from input_parser import process_orders
 
 
-DATA_PATH = ROOT_DIR / "data" / "자재정보.csv"
-TARGET_KEY = "석고보드_일반_900x1800_12.5"
+def test_db_load(material_db: dict[str, dict[str, object]], material_row_count: int) -> None:
+    assert len(material_db) == material_row_count
 
 
-def test_db_load() -> None:
-    material_db = load_material_db(DATA_PATH)
-    assert len(material_db) >= 10
+def test_T01_pallet_conversion(
+    material_db: dict[str, dict[str, object]],
+    first_material: dict[str, object],
+    first_material_key: str,
+) -> None:
+    quantity = int(first_material["팔레트당적재수"]) + 1
+    result = process_orders(material_db, [{"material_key": first_material_key, "quantity": quantity}])
+    expected = math.ceil(quantity / int(first_material["팔레트당적재수"]))
+    assert result["items"][0]["pallet_count"] == expected
 
 
-def test_T01_pallet_conversion() -> None:
-    material_db = load_material_db(DATA_PATH)
-    result = process_orders(
-        material_db,
-        [{"material_key": TARGET_KEY, "quantity": 50}],
-    )
-
-    assert result["items"][0]["pallet_count"] == 2
-
-
-def test_total_weight() -> None:
-    material_db = load_material_db(DATA_PATH)
-    result = process_orders(
-        material_db,
-        [{"material_key": TARGET_KEY, "quantity": 40}],
-    )
-
-    assert result["items"][0]["total_weight_kg"] == pytest.approx(380.0)
+def test_total_weight(
+    material_db: dict[str, dict[str, object]],
+    first_material: dict[str, object],
+    first_material_key: str,
+) -> None:
+    quantity = min(40, max(1, int(first_material["팔레트당적재수"])))
+    result = process_orders(material_db, [{"material_key": first_material_key, "quantity": quantity}])
+    expected = quantity * float(first_material["낱장무게(kg)"])
+    assert result["items"][0]["total_weight_kg"] == pytest.approx(expected)
 
 
-def test_invalid_material() -> None:
-    material_db = load_material_db(DATA_PATH)
+def test_invalid_material(material_db: dict[str, dict[str, object]]) -> None:
 
     with pytest.raises(ValueError):
         process_orders(
@@ -54,13 +42,12 @@ def test_invalid_material() -> None:
         )
 
 
-def test_multi_order() -> None:
-    material_db = load_material_db(DATA_PATH)
+def test_multi_order(material_db: dict[str, dict[str, object]], first_material_key: str) -> None:
     result = process_orders(
         material_db,
         [
-            {"material_key": TARGET_KEY, "quantity": 40},
-            {"material_key": "석고보드_방수_900x1800_12.5", "quantity": 10},
+            {"material_key": first_material_key, "quantity": 1},
+            {"material_key": first_material_key, "quantity": 2},
         ],
     )
 

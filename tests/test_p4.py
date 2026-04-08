@@ -1,30 +1,16 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-
-ROOT_DIR = Path(__file__).resolve().parents[1]
-SRC_DIR = ROOT_DIR / "src"
-
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
-from bin_packing import filter_feasible_vehicles, load_vehicle_db
-from input_parser import load_material_db, process_orders
+from bin_packing import filter_feasible_vehicles
+from input_parser import process_orders
 from loader import plan_loading
 from vehicle_selector import select_optimal_vehicle
 
 
-MATERIAL_PATH = ROOT_DIR / "data" / "자재정보.csv"
-VEHICLE_PATH = ROOT_DIR / "data" / "차량정보.csv"
-TARGET_KEY = "석고보드_일반_900x1800_12.5"
-
-
-def test_T03_axle_overload() -> None:
+def test_T03_axle_overload(vehicle_db: list[dict[str, object]]) -> None:
+    trailer_ref = max(vehicle_db, key=lambda vehicle: float(vehicle["max_weight_kg"]))
     trailer = {
-        "vehicle_name": "25톤_트레일러",
-        "cargo_length_mm": 12000.0,
+        "vehicle_name": trailer_ref["vehicle_name"],
+        "cargo_length_mm": float(trailer_ref["cargo_length_mm"]),
         "axles": 2,
     }
     items = [
@@ -42,24 +28,28 @@ def test_T03_axle_overload() -> None:
     assert result["axle_overload_critical"] is True
 
 
-def test_T04_front_rear_deviation() -> None:
+def test_T04_front_rear_deviation(vehicle_db: list[dict[str, object]]) -> None:
+    vehicle_ref = vehicle_db[0]
     vehicle = {
-        "vehicle_name": "5톤_윙바디",
-        "cargo_length_mm": 6000.0,
-        "axles": 2,
+        "vehicle_name": vehicle_ref["vehicle_name"],
+        "cargo_length_mm": float(vehicle_ref["cargo_length_mm"]),
+        "axles": int(vehicle_ref["axles"]),
     }
+    total_weight = 1000.0
+    front_weight = total_weight * (1 + 0.35) / 2
+    rear_weight = total_weight - front_weight
     items = [
         {
             "material_key": "front_item",
             "pallet_count": 1,
-            "total_weight_kg": 675.0,
+            "total_weight_kg": front_weight,
             "total_volume_m3": 1.0,
             "mix_group": "G1",
         },
         {
             "material_key": "rear_item",
             "pallet_count": 1,
-            "total_weight_kg": 325.0,
+            "total_weight_kg": rear_weight,
             "total_volume_m3": 1.0,
             "mix_group": "G2",
         },
@@ -71,15 +61,18 @@ def test_T04_front_rear_deviation() -> None:
     assert result["front_rear_critical"] is True
 
 
-def test_mix_group_violation() -> None:
+def test_mix_group_violation(vehicle_db: list[dict[str, object]], first_material: dict[str, object]) -> None:
+    vehicle_ref = vehicle_db[0]
     vehicle = {
-        "vehicle_name": "5톤_윙바디",
-        "cargo_length_mm": 6000.0,
-        "axles": 2,
+        "vehicle_name": vehicle_ref["vehicle_name"],
+        "cargo_length_mm": float(vehicle_ref["cargo_length_mm"]),
+        "axles": int(vehicle_ref["axles"]),
     }
+    base_group = str(first_material["혼적불가그룹"])
+    conflicting_group = "G4" if base_group == "G1" else "G1"
     items = [
-        {"material_key": "g1", "pallet_count": 1, "total_weight_kg": 100.0, "total_volume_m3": 1.0, "mix_group": "G1"},
-        {"material_key": "g4", "pallet_count": 1, "total_weight_kg": 100.0, "total_volume_m3": 1.0, "mix_group": "G4"},
+        {"material_key": "base", "pallet_count": 1, "total_weight_kg": 100.0, "total_volume_m3": 1.0, "mix_group": base_group},
+        {"material_key": "conflict", "pallet_count": 1, "total_weight_kg": 100.0, "total_volume_m3": 1.0, "mix_group": conflicting_group},
     ]
 
     result = plan_loading(vehicle, items)
@@ -87,15 +80,18 @@ def test_mix_group_violation() -> None:
     assert result["mix_group_violation"] is True
 
 
-def test_mix_group_ok() -> None:
+def test_mix_group_ok(vehicle_db: list[dict[str, object]], first_material: dict[str, object]) -> None:
+    vehicle_ref = vehicle_db[0]
     vehicle = {
-        "vehicle_name": "5톤_윙바디",
-        "cargo_length_mm": 6000.0,
-        "axles": 2,
+        "vehicle_name": vehicle_ref["vehicle_name"],
+        "cargo_length_mm": float(vehicle_ref["cargo_length_mm"]),
+        "axles": int(vehicle_ref["axles"]),
     }
+    base_group = str(first_material["혼적불가그룹"])
+    non_conflicting_group = "G2" if base_group != "G2" else "G5"
     items = [
-        {"material_key": "g1", "pallet_count": 1, "total_weight_kg": 100.0, "total_volume_m3": 1.0, "mix_group": "G1"},
-        {"material_key": "g2", "pallet_count": 1, "total_weight_kg": 100.0, "total_volume_m3": 1.0, "mix_group": "G2"},
+        {"material_key": "base", "pallet_count": 1, "total_weight_kg": 100.0, "total_volume_m3": 1.0, "mix_group": base_group},
+        {"material_key": "ok", "pallet_count": 1, "total_weight_kg": 100.0, "total_volume_m3": 1.0, "mix_group": non_conflicting_group},
     ]
 
     result = plan_loading(vehicle, items)
@@ -103,16 +99,18 @@ def test_mix_group_ok() -> None:
     assert result["mix_group_violation"] is False
 
 
-def test_P1_P2_P3_regression() -> None:
-    material_db = load_material_db(MATERIAL_PATH)
-    vehicles = load_vehicle_db(VEHICLE_PATH)
-    order_result = process_orders(
-        material_db,
-        [{"material_key": TARGET_KEY, "quantity": 40}],
-    )
-    feasible = filter_feasible_vehicles(order_result["items"], vehicles)
+def test_P1_P2_P3_regression(
+    material_db: dict[str, dict[str, object]],
+    vehicle_db: list[dict[str, object]],
+    first_material_key: str,
+    feasible_quantity: int,
+) -> None:
+    order_result = process_orders(material_db, [{"material_key": first_material_key, "quantity": feasible_quantity}])
+    feasible = filter_feasible_vehicles(order_result["items"], vehicle_db)
     selection = select_optimal_vehicle(feasible)
 
     assert order_result["items"][0]["pallet_count"] == 1
-    assert len(feasible) >= 1
-    assert selection["selected_vehicle"]["vehicle_name"] == "1톤_트럭"
+    assert selection["selected_vehicle"]["vehicle_name"] == min(
+        feasible,
+        key=lambda vehicle: int(vehicle["freight_cost_krw"]),
+    )["vehicle_name"]

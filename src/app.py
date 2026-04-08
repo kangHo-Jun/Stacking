@@ -155,10 +155,13 @@ def run() -> str:
 
     for material_key, quantity in zip(material_keys, quantities):
         material_key = material_key.strip()
-        quantity = quantity.strip()
-        if not material_key or not quantity:
+        quantity_text = quantity.strip()
+        if not material_key and not quantity_text:
             continue
-        orders.append({"material_key": material_key, "quantity": int(quantity)})
+        quantity_value = int(quantity_text or 0)
+        if quantity_value <= 0:
+            return "수량을 입력해주세요", 400
+        orders.append({"material_key": material_key, "quantity": quantity_value})
 
     if not orders:
         flash("주문 항목을 1개 이상 입력하십시오.")
@@ -247,4 +250,4 @@ def download_pdf(history_id: int) -> Response:
 
 if __name__ == "__main__":
     init_history_db()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT") or 5000))

@@ -1,73 +1,58 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-
-ROOT_DIR = Path(__file__).resolve().parents[1]
-SRC_DIR = ROOT_DIR / "src"
-
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
+import math
 
 from bin_packing import evaluate_vehicle_feasibility, filter_feasible_vehicles, load_vehicle_db
-from input_parser import load_material_db, process_orders
+from input_parser import process_orders
 
 
-MATERIAL_PATH = ROOT_DIR / "data" / "자재정보.csv"
-VEHICLE_PATH = ROOT_DIR / "data" / "차량정보.csv"
-TARGET_KEY = "석고보드_일반_900x1800_12.5"
+def test_vehicle_db_load(vehicle_db: list[dict[str, object]], vehicle_row_count: int) -> None:
+    assert len(vehicle_db) == vehicle_row_count
 
 
-def test_vehicle_db_load() -> None:
-    vehicles = load_vehicle_db(VEHICLE_PATH)
-    assert len(vehicles) == 6
+def test_T02_overweight_critical(
+    material_db: dict[str, dict[str, object]],
+    vehicle_db: list[dict[str, object]],
+    first_material: dict[str, object],
+    first_material_key: str,
+) -> None:
+    lightest_vehicle = min(vehicle_db, key=lambda vehicle: float(vehicle["max_weight_kg"]))
+    quantity = math.floor(float(lightest_vehicle["max_weight_kg"]) / float(first_material["낱장무게(kg)"])) + 1
+    order_result = process_orders(material_db, [{"material_key": first_material_key, "quantity": quantity}])
+    evaluations = evaluate_vehicle_feasibility(order_result["items"], vehicle_db)
+    target = next(item for item in evaluations if item["vehicle_name"] == lightest_vehicle["vehicle_name"])
+    assert order_result["total_weight_kg"] > float(lightest_vehicle["max_weight_kg"])
+    assert target["feasible"] is False
 
 
-def test_T02_overweight_critical() -> None:
-    material_db = load_material_db(MATERIAL_PATH)
-    vehicles = load_vehicle_db(VEHICLE_PATH)
-    order_result = process_orders(
-        material_db,
-        [{"material_key": TARGET_KEY, "quantity": 127}],
-    )
-
-    evaluations = evaluate_vehicle_feasibility(order_result["items"], vehicles)
-    one_ton = next(item for item in evaluations if item["vehicle_name"] == "1톤_트럭")
-
-    assert order_result["total_weight_kg"] >= 1200
-    assert one_ton["feasible"] is False
-
-
-def test_feasible_vehicles_exist() -> None:
-    material_db = load_material_db(MATERIAL_PATH)
-    vehicles = load_vehicle_db(VEHICLE_PATH)
-    order_result = process_orders(
-        material_db,
-        [{"material_key": TARGET_KEY, "quantity": 40}],
-    )
-
-    feasible = filter_feasible_vehicles(order_result["items"], vehicles)
+def test_feasible_vehicles_exist(
+    material_db: dict[str, dict[str, object]],
+    vehicle_db: list[dict[str, object]],
+    first_material_key: str,
+    feasible_quantity: int,
+) -> None:
+    order_result = process_orders(material_db, [{"material_key": first_material_key, "quantity": feasible_quantity}])
+    feasible = filter_feasible_vehicles(order_result["items"], vehicle_db)
     assert len(feasible) >= 1
 
 
-def test_all_vehicles_infeasible() -> None:
-    material_db = load_material_db(MATERIAL_PATH)
-    vehicles = load_vehicle_db(VEHICLE_PATH)
-    order_result = process_orders(
-        material_db,
-        [{"material_key": TARGET_KEY, "quantity": 9999}],
-    )
-
-    feasible = filter_feasible_vehicles(order_result["items"], vehicles)
+def test_all_vehicles_infeasible(
+    material_db: dict[str, dict[str, object]],
+    vehicle_db: list[dict[str, object]],
+    first_material_key: str,
+    infeasible_quantity: int,
+) -> None:
+    order_result = process_orders(material_db, [{"material_key": first_material_key, "quantity": infeasible_quantity}])
+    feasible = filter_feasible_vehicles(order_result["items"], vehicle_db)
     assert len(feasible) == 0
 
 
-def test_T01_regression() -> None:
-    material_db = load_material_db(MATERIAL_PATH)
-    order_result = process_orders(
-        material_db,
-        [{"material_key": TARGET_KEY, "quantity": 50}],
-    )
-
-    assert order_result["items"][0]["pallet_count"] == 2
+def test_T01_regression(
+    material_db: dict[str, dict[str, object]],
+    first_material: dict[str, object],
+    first_material_key: str,
+) -> None:
+    quantity = int(first_material["팔레트당적재수"]) + 1
+    order_result = process_orders(material_db, [{"material_key": first_material_key, "quantity": quantity}])
+    expected = math.ceil(quantity / int(first_material["팔레트당적재수"]))
+    assert order_result["items"][0]["pallet_count"] == expected

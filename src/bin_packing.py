@@ -5,6 +5,16 @@ from pathlib import Path
 from typing import Iterable
 
 
+def _parse_float(value: str, default: float = 0.0) -> float:
+    cleaned = value.strip()
+    return float(cleaned) if cleaned else default
+
+
+def _parse_int(value: str, default: int = 0) -> int:
+    cleaned = value.strip()
+    return int(float(cleaned)) if cleaned else default
+
+
 def load_vehicle_db(csv_path: str | Path) -> list[dict[str, object]]:
     path = Path(csv_path)
     vehicles: list[dict[str, object]] = []
@@ -12,21 +22,21 @@ def load_vehicle_db(csv_path: str | Path) -> list[dict[str, object]]:
     with path.open("r", encoding="utf-8-sig", newline="") as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
-            length_mm = float(row["적재함길이(mm)"])
-            width_mm = float(row["적재함너비(mm)"])
-            height_mm = float(row["적재함높이(mm)"])
+            length_mm = _parse_float(row["적재함길이(mm)"])
+            width_mm = _parse_float(row["적재함너비(mm)"])
+            height_mm = _parse_float(row["적재함높이(mm)"])
             cargo_volume_m3 = (length_mm * width_mm * height_mm) / 1_000_000_000
 
             vehicles.append(
                 {
                     "vehicle_name": row["차량명"].strip(),
-                    "max_weight_kg": float(row["최대적재중량(kg)"]),
+                    "max_weight_kg": _parse_float(row["최대적재중량(kg)"]),
                     "cargo_length_mm": length_mm,
                     "cargo_width_mm": width_mm,
                     "cargo_height_mm": height_mm,
                     "cargo_volume_m3": cargo_volume_m3,
-                    "axles": int(row["축수"]),
-                    "freight_cost_krw": int(row["운임(원)"]),
+                    "axles": _parse_int(row["축수"], default=1),
+                    "freight_cost_krw": _parse_int(row["운임(원)"], default=0),
                 }
             )
 

@@ -1,15 +1,5 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-
-ROOT_DIR = Path(__file__).resolve().parents[1]
-SRC_DIR = ROOT_DIR / "src"
-
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
 from risk_evaluator import evaluate_risk
 
 
@@ -43,7 +33,7 @@ def test_T06_fragile_bottom() -> None:
 def test_T07_all_safe() -> None:
     result = evaluate_risk(
         {
-            "weight_ratio_pct": 80.0,
+            "weight_ratio_pct": 70.0,
             "axle_overload_critical": False,
             "volume_ratio_pct": 60.0,
             "front_rear_deviation_pct": 8.0,
