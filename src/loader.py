@@ -40,8 +40,7 @@ def _make_pallets(order_items: Iterable[dict[str, object]]) -> list[dict[str, ob
     return pallets
 
 
-def plan_loading(selected_vehicle: dict[str, object], order_items: Iterable[dict[str, object]]) -> dict[str, object]:
-    pallets = _make_pallets(order_items)
+def _plan_loading_from_pallets(selected_vehicle: dict[str, object], pallets: list[dict[str, object]]) -> dict[str, object]:
     placements: list[dict[str, object]] = []
 
     for index, pallet in enumerate(pallets):
@@ -122,4 +121,32 @@ def plan_loading(selected_vehicle: dict[str, object], order_items: Iterable[dict
         "axle_overload_critical": axle_overload_critical,
         "mix_group_violation": mix_group_violation,
         "fragile_bottom_pressure": fragile_bottom_pressure,
+    }
+
+
+def plan_loading(selected_vehicle: dict[str, object], order_items: Iterable[dict[str, object]]) -> dict[str, object]:
+    return _plan_loading_from_pallets(selected_vehicle, _make_pallets(order_items))
+
+
+def plan_fleet_loading(selection_result: dict[str, object]) -> dict[str, object]:
+    vehicle_results: list[dict[str, object]] = []
+    total_weight_kg = 0.0
+    for allocation in selection_result.get("vehicle_allocations", []):
+        vehicle = dict(allocation["vehicle"])
+        pallets = list(allocation.get("assigned_pallets", []))
+        load_result = _plan_loading_from_pallets(vehicle, pallets)
+        vehicle_results.append(
+            {
+                "vehicle": vehicle,
+                "assigned_pallets": pallets,
+                "load_result": load_result,
+            }
+        )
+        total_weight_kg += float(load_result["total_weight_kg"])
+
+    return {
+        "vehicle_results": vehicle_results,
+        "vehicle_counts": dict(selection_result.get("vehicle_counts", {})),
+        "total_weight_kg": total_weight_kg,
+        "total_freight_krw": int(selection_result.get("total_freight_krw", 0)),
     }

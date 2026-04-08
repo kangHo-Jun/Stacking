@@ -144,7 +144,14 @@
       <div class="panel placements">
         <h2>팔레트 순서</h2>
         <ul style="margin-top:12px;">
-          {% if placements %}
+          {% if vehicle_sections %}
+            {% for section in vehicle_sections %}
+              <li>
+                <span>{{ section["인스턴스"] or section["차량"] }}</span>
+                <span class="subtle">{{ section["팔레트수"] }} pallets / {{ section["총중량"] }}kg</span>
+              </li>
+            {% endfor %}
+          {% elif placements %}
             {% for item in placements %}
               <li>
                 <span>{{ loop.index }}. {{ item.material_key }}</span>
@@ -168,6 +175,25 @@
         </ul>
       </div>
     </section>
+
+    {% if vehicle_sections %}
+      <section class="grid" style="grid-template-columns: 1fr; margin-top:18px;">
+        {% for section in vehicle_sections %}
+          <div class="panel">
+            <h2>{{ section["인스턴스"] or section["차량"] }}</h2>
+            <p>중량 {{ section["총중량"] }}kg / 팔레트 {{ section["팔레트수"] }} / 위험도 <strong style="color: {{ risk_color(section['위험도']) }}">{{ section["위험도"] }}</strong></p>
+            <ul class="risk-list" style="margin-top:12px;">
+              {% for pallet in section["팔레트순서"] %}
+                <li>
+                  <span>{{ loop.index }}. {{ pallet }}</span>
+                  <span class="subtle">{{ section["차량"] }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      </section>
+    {% endif %}
   </div>
 </body>
 </html>

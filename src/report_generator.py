@@ -101,3 +101,94 @@ def generate_report(
         "json_path": json_path,
         "instruction_path": text_path,
     }
+
+
+def generate_fleet_report(
+    order_result: dict[str, object],
+    selection_result: dict[str, object],
+    fleet_load_result: dict[str, object],
+    fleet_risk_result: dict[str, object],
+    output_dir: str | Path,
+) -> dict[str, Path]:
+    destination = Path(output_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+
+    vehicle_sections = []
+    for vehicle_risk in fleet_risk_result.get("vehicle_risks", []):
+        load_result = vehicle_risk["load_result"]
+        risk_result = vehicle_risk["risk_result"]
+        vehicle_name = vehicle_risk["vehicle_name"]
+        pallets = vehicle_risk.get("assigned_pallets", [])
+        vehicle_sections.append(
+            {
+                "차량": vehicle_name,
+                "인스턴스": vehicle_risk.get("instance_id"),
+                "총중량": float(load_result["total_weight_kg"]),
+                "팔레트수": len(pallets),
+                "위험도": risk_result["final_level"],
+                "현장매뉴얼": risk_result["manual"],
+                "편차": {
+                    "전후": float(load_result["front_rear_deviation_pct"]),
+                    "좌우": float(load_result["left_right_deviation_pct"]),
+                    "상단비중": float(load_result["top_share_pct"]),
+                },
+                "혼적위반": bool(load_result["mix_group_violation"]),
+                "축중초과": bool(load_result["axle_overload_critical"]),
+                "항목별위험도": {
+                    RISK_LABELS[key]: value
+                    for key, value in risk_result["category_levels"].items()
+                },
+                "팔레트순서": [
+                    pallet["material_key"]
+                    for pallet in pallets
+                ],
+            }
+        )
+
+    vehicle_summary = ", ".join(
+        f"{name} x{count}"
+        for name, count in selection_result.get("vehicle_counts", {}).items()
+    )
+    payload = {
+        "차량": vehicle_summary or selection_result["selected_vehicle"]["vehicle_name"],
+        "총운임": int(selection_result["total_freight_krw"]),
+        "총중량": float(order_result["total_weight_kg"]),
+        "팔레트수": sum(int(item.get("pallet_count", 0)) for item in order_result["items"]),
+        "위험도": fleet_risk_result["final_level"],
+        "현장매뉴얼": fleet_risk_result["manual"],
+        "편차": vehicle_sections[0]["편차"] if vehicle_sections else {"전후": 0.0, "좌우": 0.0, "상단비중": 0.0},
+        "혼적위반": any(section["혼적위반"] for section in vehicle_sections),
+        "축중초과": any(section["축중초과"] for section in vehicle_sections),
+        "항목별위험도": vehicle_sections[0]["항목별위험도"] if vehicle_sections else {},
+        "차량별결과": vehicle_sections,
+    }
+
+    lines = [
+        f"총 차량 조합: {payload['차량']}",
+        f"총 운임: {payload['총운임']}원",
+        f"총 중량: {payload['총중량']:.1f}kg",
+        f"전체 위험도: {payload['위험도']}",
+        f"현장 조치: {payload['현장매뉴얼']}",
+        "",
+    ]
+    for section in vehicle_sections:
+        lines.append(f"[{section['인스턴스'] or section['차량']}]")
+        lines.append(f"차량명: {section['차량']}")
+        lines.append(f"중량: {section['총중량']:.1f}kg")
+        lines.append(f"팔레트: {section['팔레트수']}")
+        lines.append(f"위험도: {section['위험도']}")
+        lines.append("팔레트 순서:")
+        for index, pallet in enumerate(section["팔레트순서"], start=1):
+            lines.append(f"{index}. {pallet}")
+        lines.append(f"현장 조치: {section['현장매뉴얼']}")
+        lines.append("")
+
+    json_path = destination / "result.json"
+    text_path = destination / "지시서.txt"
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    text_path.write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+
+    return {
+        "json_path": json_path,
+        "instruction_path": text_path,
+    }

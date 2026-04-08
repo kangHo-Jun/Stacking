@@ -10,9 +10,9 @@ from flask import Flask, Response, flash, redirect, render_template, request, ur
 
 from bin_packing import filter_feasible_vehicles, load_vehicle_db
 from input_parser import load_material_db, process_orders
-from loader import plan_loading
-from report_generator import generate_report
-from risk_evaluator import evaluate_risk
+from loader import plan_fleet_loading, plan_loading
+from report_generator import generate_fleet_report, generate_report
+from risk_evaluator import evaluate_fleet_risk, evaluate_risk
 from vehicle_selector import select_optimal_vehicle
 
 
@@ -71,26 +71,25 @@ def run_pipeline(orders: list[dict[str, object]]) -> dict[str, object]:
     vehicle_db = load_vehicle_db(DATA_DIR / "차량정보.csv")
 
     order_result = process_orders(material_db, orders)
-    feasible_vehicles = filter_feasible_vehicles(order_result["items"], vehicle_db)
-    if not feasible_vehicles:
+    selection_result = select_optimal_vehicle(vehicle_db, order_result["items"])
+    if not selection_result.get("vehicle_allocations"):
         raise ValueError("적재 불가 - 분할 배차 필요")
 
-    selection_result = select_optimal_vehicle(feasible_vehicles)
-    load_result = plan_loading(selection_result["selected_vehicle"], order_result["items"])
-    risk_result = evaluate_risk(load_result)
-    report_paths = generate_report(
+    fleet_load_result = plan_fleet_loading(selection_result)
+    fleet_risk_result = evaluate_fleet_risk(fleet_load_result)
+    report_paths = generate_fleet_report(
         order_result,
         selection_result,
-        load_result,
-        risk_result,
+        fleet_load_result,
+        fleet_risk_result,
         OUTPUT_DIR,
     )
 
     return {
         "order_result": order_result,
         "selection_result": selection_result,
-        "load_result": load_result,
-        "risk_result": risk_result,
+        "load_result": fleet_load_result,
+        "risk_result": fleet_risk_result,
         "report_paths": report_paths,
     }
 
@@ -181,7 +180,8 @@ def run() -> str:
         payload=payload,
         history_id=history_id,
         created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        placements=run_result["load_result"]["placements"],
+        placements=[],
+        vehicle_sections=payload.get("차량별결과", []),
     )
 
 
@@ -237,6 +237,7 @@ def download_pdf(history_id: int) -> Response:
         history_id=history_id,
         created_at=row["created_at"],
         placements=[],
+        vehicle_sections=payload.get("차량별결과", []),
         pdf_mode=True,
     )
     pdf_bytes = render_pdf_bytes(html)

@@ -80,3 +80,35 @@ def evaluate_risk(load_result: dict[str, object]) -> dict[str, object]:
         "final_level": final_level,
         "manual": manual,
     }
+
+
+def evaluate_fleet_risk(fleet_load_result: dict[str, object]) -> dict[str, object]:
+    vehicle_risks: list[dict[str, object]] = []
+    levels: list[str] = []
+
+    for vehicle_result in fleet_load_result.get("vehicle_results", []):
+        risk = evaluate_risk(vehicle_result["load_result"])
+        vehicle_risks.append(
+            {
+                "vehicle_name": vehicle_result["vehicle"]["vehicle_name"],
+                "instance_id": vehicle_result["vehicle"].get("instance_id"),
+                "risk_result": risk,
+                "load_result": vehicle_result["load_result"],
+                "assigned_pallets": vehicle_result.get("assigned_pallets", []),
+            }
+        )
+        levels.append(risk["final_level"])
+
+    final_level = _highest_level(levels) if levels else "Safe"
+    manual = {
+        "Safe": "표준 결속 및 상차 사진 촬영 후 출고",
+        "Caution": "주의 수준입니다. 편차와 공간 사용률을 재확인하고 필요 시 재배치 후 출고하십시오.",
+        "Danger": "위험 수준입니다. 상단 적재 또는 취약 자재 압박을 해소한 뒤 재검토하십시오.",
+        "Critical": "즉시 중단 후 과적, 축중, 편차 문제를 먼저 해소하십시오.",
+    }[final_level]
+
+    return {
+        "vehicle_risks": vehicle_risks,
+        "final_level": final_level,
+        "manual": manual,
+    }
