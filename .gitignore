@@ -1,0 +1,6 @@
+*.json
+__pycache__/
+*.pyc
+data/history.db
+output/
+.env
