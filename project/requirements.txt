@@ -1,0 +1,5 @@
+flask==3.0.3
+ortools==9.10.4067
+weasyprint==62.3
+gspread==6.1.2
+google-auth==2.29.0

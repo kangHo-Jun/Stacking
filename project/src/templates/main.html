@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>대산 적재 AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #48BB78;
+      --primary-dark: #123628;
+      --primary-hover: #38A169;
+      --background: #F1F5F0;
+      --surface: #FFFFFF;
+      --gradient-header: linear-gradient(135deg, #123628 0%, #1A4A35 100%);
+      --gradient-cta: linear-gradient(135deg, #48BB78, #38A169);
+      --danger: #ef4444;
+      --danger-soft: #fff3f1;
+      --warning: #f59e0b;
+      --ink: #183026;
+      --muted: #64756d;
+      --line: rgba(18, 54, 40, 0.12);
+      --glass-bg: rgba(255, 255, 255, 0.72);
+      --glass-bg-heavy: rgba(255, 255, 255, 0.88);
+      --glass-border: rgba(255, 255, 255, 0.45);
+      --glass-blur: 16px;
+      --shadow-glow: 0 0 20px rgba(72, 187, 120, 0.25);
+      --shadow-card: 0 24px 50px rgba(18, 54, 40, 0.08);
+      --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+      --header-height: 48px;
+      --panel-left-width: 280px;
+      --panel-right-width: 260px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans KR", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(72, 187, 120, 0.12), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(26, 74, 53, 0.16), transparent 26%),
+        var(--background);
+    }
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: var(--header-height) 1fr;
+    }
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 18px;
+      background: var(--gradient-header);
+      color: white;
+      box-shadow: 0 16px 30px rgba(18, 54, 40, 0.24);
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 999px;
+      background: var(--primary);
+      box-shadow: 0 0 16px rgba(72, 187, 120, 0.9);
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .header-actions a, .header-actions button {
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.12);
+      color: white;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      transition: var(--transition-normal);
+    }
+    .header-actions button[disabled] {
+      opacity: .48;
+      cursor: not-allowed;
+    }
+    .workspace {
+      display: grid;
+      grid-template-columns: var(--panel-left-width) minmax(0, 1fr) var(--panel-right-width);
+      gap: 16px;
+      padding: 16px;
+      min-height: 0;
+    }
+    .panel {
+      min-height: 0;
+      border-radius: 28px;
+      background: var(--glass-bg-heavy);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(var(--glass-blur));
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+    .panel-scroll {
+      height: calc(100vh - var(--header-height) - 32px);
+      overflow: auto;
+      padding: 22px;
+    }
+    .section-label {
+      font-size: .78rem;
+      color: var(--primary-hover);
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .section-title {
+      margin: 0;
+      font-size: 1.3rem;
+      letter-spacing: -0.03em;
+    }
+    .section-copy {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    .field, .order-card, .status-card, .result-card, .risk-row, .sequence-item, .viz-card, .manual-box, .empty-state {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--surface);
+      box-shadow: 0 12px 28px rgba(18, 54, 40, 0.04);
+    }
+    .field {
+      padding: 14px;
+      margin-top: 14px;
+    }
+    .field select, .field input {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      padding: 13px 14px;
+      font: inherit;
+      background: #f8fbf8;
+      color: var(--ink);
+    }
+    .split {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr 110px;
+      margin-top: 14px;
+    }
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .btn {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+      cursor: pointer;
+      transition: var(--transition-normal);
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-cta {
+      width: 100%;
+      border: none;
+      color: white;
+      background: var(--gradient-cta);
+      box-shadow: var(--shadow-glow);
+      font-weight: 700;
+      padding: 15px 16px;
+      margin-top: 18px;
+    }
+    .btn-secondary {
+      background: linear-gradient(180deg, #ffffff, #f6faf6);
+    }
+    .order-list, .result-list, .risk-list, .sequence-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .order-card {
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: start;
+    }
+    .order-title {
+      font-weight: 600;
+      line-height: 1.45;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    .order-sub {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-top: 4px;
+    }
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      border: 1px solid rgba(239, 68, 68, .2);
+      background: var(--danger-soft);
+      color: var(--danger);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+    .status-card, .result-card, .manual-box {
+      padding: 16px;
+    }
+    .result-hero {
+      background: var(--gradient-header);
+      border: none;
+      color: white;
+    }
+    .result-hero .muted,
+    .result-hero strong {
+      color: white;
+    }
+    .status-grid, .result-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, 1fr);
+      margin-top: 16px;
+    }
+    .result-title {
+      font-size: 11px;
+      color: rgba(255,255,255,.8);
+      margin-bottom: 8px;
+    }
+    .vehicle-breakdown, .result-meta, .risk-list, .sequence-list {
+      display: grid;
+      gap: 8px;
+    }
+    .vehicle-row, .meta-row, .risk-row, .sequence-item {
+      font-size: 11px;
+    }
+    .vehicle-row, .meta-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+    .vehicle-row:last-child, .meta-row:last-child {
+      border-bottom: 0;
+    }
+    .weight-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .vehicle-weight {
+      font-size: 13px;
+      font-weight: 700;
+      text-align: right;
+    }
+    .vehicle-total {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .status-card strong, .result-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+    .muted { color: var(--muted); }
+    .panel-divider {
+      height: 1px;
+      background: var(--line);
+      margin: 16px 0;
+    }
+    .center-panel {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 14px;
+      min-width: 0;
+    }
+    .canvas-header {
+      padding: 16px 18px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .view-tabs, .mobile-nav {
+      display: inline-flex;
+      gap: 8px;
+      padding: 6px;
+      border-radius: 999px;
+      background: rgba(18, 54, 40, 0.06);
+    }
+    .view-tabs button, .mobile-nav button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      cursor: pointer;
+      transition: var(--transition-normal);
+    }
+    .view-tabs button.active, .mobile-nav button.active {
+      background: white;
+      color: var(--primary-dark);
+      box-shadow: 0 10px 20px rgba(18, 54, 40, 0.1);
+      font-weight: 700;
+    }
+    .canvas-area {
+      padding: 0 18px 18px;
+      overflow: auto;
+    }
+    .canvas-stack {
+      display: grid;
+      gap: 16px;
+    }
+    .viz-card header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 16px 18px 0;
+    }
+    .viz-card .content {
+      padding: 14px 18px 18px;
+    }
+    .viz-main {
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f8fbff);
+      padding: 14px;
+    }
+    .viz-main svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .svg-card {
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f7faf8);
+      padding: 10px;
+    }
+    .svg-card svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .three-shell {
+      display: none;
+      border-radius: 24px;
+      overflow: hidden;
+      background: #1a1a2e;
+      min-height: 520px;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .three-shell.active { display: block; }
+    .three-canvas { width: 100%; height: 520px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: .82rem;
+      font-weight: 700;
+      color: white;
+      font-size: 11px;
+    }
+    .manual-box {
+      margin-top: 14px;
+      line-height: 1.65;
+      color: var(--ink);
+      background: white !important;
+      border-left: 5px solid var(--primary);
+      font-size: 11px;
+    }
+    .risk-row, .sequence-item {
+      padding: 13px 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+    }
+    .sequence-meta {
+      color: var(--muted);
+      font-size: .88rem;
+      margin-top: 4px;
+    }
+    .empty-state {
+      min-height: 320px;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 16px;
+      z-index: 110;
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.65);
+      box-shadow: 0 16px 30px rgba(18, 54, 40, 0.16);
+    }
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 22px;
+      z-index: 120;
+      background: #132b20;
+      color: white;
+      padding: 14px 16px;
+      border-radius: 16px;
+      box-shadow: 0 16px 30px rgba(18, 54, 40, 0.18);
+      display: none;
+    }
+    .toast.show { display: block; }
+    @media (max-width: 1180px) {
+      .workspace {
+        grid-template-columns: 280px minmax(0, 1fr) 260px;
+      }
+    }
+    @media (max-width: 980px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+      .panel-scroll {
+        height: auto;
+        max-height: none;
+      }
+      .left-panel, .right-panel, .center-card {
+        display: none;
+      }
+      .left-panel.mobile-active, .right-panel.mobile-active, .center-card.mobile-active {
+        display: block;
+      }
+      .mobile-nav { display: inline-flex; }
+      .canvas-header { padding-top: 20px; }
+      .status-grid, .result-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span>대산 적재 AI</span>
+      </div>
+      <div class="header-actions">
+        <a href="{{ url_for('history') }}">이력 조회</a>
+        <button type="button" id="pdfButton" disabled>PDF 출력</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel left-panel mobile-active" data-mobile-panel="input">
+        <div class="panel-scroll">
+          <div class="field">
+            <select id="materialSelect">
+              <option value="">자재를 선택하십시오</option>
+              {% for option in material_options %}
+                <option value="{{ option }}">{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="split">
+            <div class="field" style="margin-top:0;">
+              <input id="quantityInput" type="number" min="1" placeholder="수량 입력">
+            </div>
+            <div class="field" style="margin-top:0;">
+              <button class="btn btn-secondary" type="button" id="addOrderButton">+ 자재 추가</button>
+            </div>
+          </div>
+
+          <div class="panel-divider"></div>
+          <div class="order-list" id="orderList"></div>
+
+          <div class="panel-divider"></div>
+
+          <div class="field" style="margin-top:0;">
+            <select id="vehicleSelect">
+              <option value="auto">자동선택</option>
+            </select>
+          </div>
+
+          <div class="panel-divider"></div>
+          <button class="btn btn-cta" type="button" id="runButton">최적 배차 실행</button>
+        </div>
+      </aside>
+
+      <section class="panel center-card mobile-active" data-mobile-panel="visual">
+        <div class="canvas-header">
+          <div><h2 class="section-title">적재 시각화</h2></div>
+          <div class="view-tabs">
+            <button class="active" data-view="2d" type="button">2.5D 보기</button>
+            <button data-view="3d" type="button">3D 보기</button>
+          </div>
+        </div>
+        <div class="canvas-area">
+          <div class="canvas-stack" id="twoDStack">
+            <div class="empty-state" id="visualEmpty">
+              자재를 입력하고 `최적 배차 실행`을 누르면<br>평면도, 측면도, 중량분포, 3D 적재 모델이 여기에 표시됩니다.
+            </div>
+          </div>
+          <div class="three-shell" id="threeShell">
+            <div class="three-canvas" id="threeCanvas"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel right-panel mobile-active" data-mobile-panel="result">
+        <div class="panel-scroll">
+          <h2 class="section-title">배차 결과</h2>
+          <div class="result-list">
+            <div class="result-card result-hero">
+              <div class="result-title">차량 조합</div>
+              <div class="vehicle-breakdown" id="vehicleBreakdown"></div>
+              <div class="result-meta" id="resultMeta" style="margin-top:10px;"></div>
+            </div>
+
+            <div class="result-card">
+              <div style="font-size:11px; color:var(--muted);">최종 판정</div>
+              <div style="margin-top:10px;">
+                <span class="badge" id="riskBadge" style="background:#94a3b8;">Pending</span>
+              </div>
+            </div>
+
+            <div class="result-card">
+              <div style="font-size:11px; color:var(--muted);">항목별 위험도</div>
+              <div class="risk-list" id="riskList"></div>
+            </div>
+
+            <div class="manual-box" id="manualBox" style="background:#123628;">
+              현장 매뉴얼이 여기에 표시됩니다.
+            </div>
+
+            <div class="result-card">
+              <div style="font-size:11px; color:var(--muted);">적재 순서</div>
+              <div class="sequence-list" id="sequenceList"></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <nav class="mobile-nav" id="mobileNav">
+      <button class="active" data-target="input" type="button">입력</button>
+      <button data-target="visual" type="button">시각화</button>
+      <button data-target="result" type="button">결과</button>
+    </nav>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script>
+    const state = {
+      orders: [],
+      materialOptions: {{ material_options | tojson }},
+      lastResult: null,
+      threeReady: false,
+      threeContext: null,
+    };
+
+    const elements = {
+      materialSelect: document.getElementById('materialSelect'),
+      quantityInput: document.getElementById('quantityInput'),
+      addOrderButton: document.getElementById('addOrderButton'),
+      orderList: document.getElementById('orderList'),
+      runButton: document.getElementById('runButton'),
+      vehicleSelect: document.getElementById('vehicleSelect'),
+      twoDStack: document.getElementById('twoDStack'),
+      visualEmpty: document.getElementById('visualEmpty'),
+      threeShell: document.getElementById('threeShell'),
+      threeCanvas: document.getElementById('threeCanvas'),
+      pdfButton: document.getElementById('pdfButton'),
+      vehicleBreakdown: document.getElementById('vehicleBreakdown'),
+      resultMeta: document.getElementById('resultMeta'),
+      riskBadge: document.getElementById('riskBadge'),
+      riskList: document.getElementById('riskList'),
+      manualBox: document.getElementById('manualBox'),
+      sequenceList: document.getElementById('sequenceList'),
+      toast: document.getElementById('toast'),
+    };
+
+    function fmtInt(value) {
+      return Number(value || 0).toLocaleString('ko-KR', { maximumFractionDigits: 0 });
+    }
+
+    function riskColor(level) {
+      return {
+        Safe: '#48BB78',
+        Caution: '#EAB308',
+        Danger: '#EF4444',
+        Critical: '#EF4444',
+      }[level] || '#94A3B8';
+    }
+
+    function showToast(message) {
+      elements.toast.textContent = message;
+      elements.toast.classList.add('show');
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => {
+        elements.toast.classList.remove('show');
+      }, 2600);
+    }
+
+    function renderOrders() {
+      elements.orderList.innerHTML = '';
+      if (!state.orders.length) {
+        elements.orderList.innerHTML = '<div class="empty-state" style="min-height:160px;">추가된 항목이 없습니다.<br>드롭다운과 수량 입력으로 품목을 담아주세요.</div>';
+        return;
+      }
+      state.orders.forEach((order, index) => {
+        const card = document.createElement('article');
+        card.className = 'order-card';
+        card.innerHTML = `
+          <div>
+            <div class="order-title">${order.material_key}</div>
+            <div class="order-sub">수량 ${order.quantity}</div>
+          </div>
+          <button class="icon-btn" type="button" data-index="${index}">X</button>
+        `;
+        card.querySelector('button').addEventListener('click', () => {
+          state.orders.splice(index, 1);
+          renderOrders();
+        });
+        elements.orderList.appendChild(card);
+      });
+    }
+
+    function addOrder() {
+      const materialKey = elements.materialSelect.value.trim();
+      const quantity = elements.quantityInput.value.trim();
+      if (!materialKey || !/^\d+$/.test(quantity) || Number(quantity) <= 0) {
+        showToast('자재와 수량을 올바르게 입력하십시오.');
+        return;
+      }
+      state.orders.push({ material_key: materialKey, quantity: Number(quantity) });
+      elements.quantityInput.value = '';
+      elements.materialSelect.value = '';
+      renderOrders();
+    }
+
+    function renderVisualizations(vehicleSections) {
+      elements.twoDStack.innerHTML = '';
+      if (!vehicleSections.length) {
+        elements.visualEmpty.style.display = 'grid';
+        return;
+      }
+      elements.visualEmpty.style.display = 'none';
+      vehicleSections.forEach((section) => {
+        const viz = section['시각화'] || {};
+        const card = document.createElement('section');
+        card.className = 'viz-card';
+        card.innerHTML = `
+          <header>
+            <div>
+              <h3 class="section-title">${section['인스턴스'] || section['차량']}</h3>
+              <p class="section-copy">${section['총중량']}kg · 팔레트 ${section['팔레트수']}</p>
+            </div>
+            <span class="badge" style="background:${riskColor(section['위험도'])}">${section['위험도']}</span>
+          </header>
+          <div class="content">
+            <div class="viz-main">${viz.floor_plan || ''}</div>
+            <div class="svg-card" style="margin-top:14px;">${viz.side_view || ''}</div>
+            <div class="svg-card" style="margin-top:14px;">${viz.weight_map || ''}</div>
+          </div>
+        `;
+        elements.twoDStack.appendChild(card);
+      });
+    }
+
+    function renderResults(payload) {
+      const sections = payload.vehicle_sections || [];
+      elements.vehicleBreakdown.innerHTML = '';
+      sections.forEach((section) => {
+        const row = document.createElement('div');
+        row.className = 'vehicle-row';
+        row.innerHTML = `
+          <span>${section['차량']}</span>
+          <span class="weight-chip">${fmtInt(section['팔레트수'])}</span>
+          <span class="vehicle-weight">${fmtInt(section['총중량'])}kg</span>
+        `;
+        elements.vehicleBreakdown.appendChild(row);
+      });
+      const totalRow = document.createElement('div');
+      totalRow.className = 'meta-row';
+      totalRow.innerHTML = `<span>합계</span><span></span><span class="vehicle-total">${fmtInt(payload['총중량'])}kg</span>`;
+      const costRow = document.createElement('div');
+      costRow.className = 'meta-row';
+      costRow.innerHTML = `<span>총 운임</span><span></span><span class="vehicle-weight">${fmtInt(payload['총운임'])}원</span>`;
+      elements.resultMeta.innerHTML = '';
+      elements.resultMeta.appendChild(totalRow);
+      elements.resultMeta.appendChild(costRow);
+      if (elements.vehicleSelect) {
+        elements.vehicleSelect.innerHTML = '';
+        const option = document.createElement('option');
+        option.value = 'auto';
+        option.textContent = payload['차량'] || '자동선택';
+        elements.vehicleSelect.appendChild(option);
+      }
+      elements.riskBadge.textContent = payload['위험도'] || 'Pending';
+      elements.riskBadge.style.background = riskColor(payload['위험도']);
+      elements.manualBox.textContent = payload['현장매뉴얼'] || '현장 매뉴얼이 없습니다.';
+      const manualBorder = {
+        Safe: '#48BB78',
+        Caution: '#EAB308',
+        Danger: '#F97316',
+        Critical: '#EF4444',
+      }[payload['위험도']] || '#48BB78';
+      elements.manualBox.style.borderLeftColor = manualBorder;
+      elements.riskList.innerHTML = '';
+      Object.entries(payload['항목별위험도'] || {}).forEach(([label, level]) => {
+        const row = document.createElement('div');
+        row.className = 'risk-row';
+        row.innerHTML = `<span>${label}</span><span class="badge" style="background:${riskColor(level)}">${level}</span>`;
+        elements.riskList.appendChild(row);
+      });
+      elements.sequenceList.innerHTML = '';
+      (payload['팔레트목록'] || []).forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'sequence-item';
+        row.innerHTML = `
+          <div>
+            <div><strong>${item.order}. ${item.material}</strong></div>
+            <div class="sequence-meta">${item.vehicle} · ${item.unit} · ${item.qty}</div>
+          </div>
+          <div>${fmtInt(item.weight)}kg</div>
+        `;
+        elements.sequenceList.appendChild(row);
+      });
+      elements.pdfButton.disabled = !payload.history_id;
+      if (payload.history_id) {
+        elements.pdfButton.onclick = () => {
+          window.location.href = `/pdf/${payload.history_id}`;
+        };
+      }
+      renderVisualizations(payload.vehicle_sections || []);
+      buildThreeScene(payload.vehicle_sections || []);
+    }
+
+    function buildThreeScene(vehicleSections) {
+      elements.threeCanvas.innerHTML = '';
+      state.threeContext = null;
+      if (!vehicleSections.length || !window.THREE) {
+        return;
+      }
+      const width = elements.threeCanvas.clientWidth || 900;
+      const height = elements.threeCanvas.clientHeight || 520;
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x1a1a2e);
+      const camera = new THREE.PerspectiveCamera(46, width / height, 0.1, 5000);
+      camera.position.set(15, 12, 15);
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(width, height);
+      elements.threeCanvas.appendChild(renderer.domElement);
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.target.set(4, 2, 1.5);
+      camera.lookAt(4, 2, 1.5);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      const light = new THREE.DirectionalLight(0xffffff, 0.8);
+      light.position.set(10, 20, 10);
+      scene.add(light);
+      const grid = new THREE.GridHelper(20, 20, 0xe2e8f0, 0xe2e8f0);
+      grid.position.set(4, 0.01, 1.5);
+      scene.add(grid);
+
+      let xOffset = 0;
+      vehicleSections.forEach((section) => {
+        const items = section['시각화']?.items || [];
+        const dims = section['시각화']?.vehicle || {};
+        const floorLength = Math.max((dims.length_mm || 6000) / 100, 40);
+        const floorWidth = Math.max((dims.width_mm || 2200) / 100, 18);
+        const floor = new THREE.Mesh(
+          new THREE.BoxGeometry(floorLength, 4, floorWidth),
+          new THREE.MeshPhongMaterial({ color: 0x294436, transparent: true, opacity: 0.45 })
+        );
+        floor.position.set(xOffset + floorLength / 2, 2, floorWidth / 2);
+        scene.add(floor);
+        const frame = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(floorLength, 40, floorWidth)),
+          new THREE.LineBasicMaterial({ color: 0xa7c4b1 })
+        );
+        frame.position.set(xOffset + floorLength / 2, 20, floorWidth / 2);
+        scene.add(frame);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0xe2e8f0 });
+        const points = [new THREE.Vector3(xOffset - 4, 0, 0), new THREE.Vector3(xOffset - 4, 28, 0)];
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), lineMat));
+
+        items.forEach((item) => {
+          const isSheet = item.unit === 'sheet';
+          const geometry = new THREE.BoxGeometry(isSheet ? 10 : 14, isSheet ? 4 : 11, isSheet ? 6 : 8);
+          const material = new THREE.MeshPhongMaterial({
+            color: isSheet ? 0x34d399 : (Number(item.layer || 1) > 1 ? 0x93c5fd : 0x1d4ed8),
+            transparent: true,
+            opacity: isSheet ? 0.7 : (Number(item.layer || 1) > 1 ? 0.85 : 1.0),
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.position.set(
+            xOffset + 8 + (Number(item.x || 0) / 100),
+            4 + (isSheet ? 2 : 5) + ((Number(item.layer || 1) - 1) * 14),
+            5 + (Number(item.y || 0) / 100)
+          );
+          scene.add(mesh);
+        });
+        scene.add(makeTextSprite('1층', xOffset - 5, 4, 0));
+        scene.add(makeTextSprite('2층', xOffset - 5, 18, 0));
+        xOffset += floorLength + 28;
+      });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+      state.threeContext = { renderer, scene, camera, controls };
+    }
+
+    function makeTextSprite(text, x, y, z) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '24px Noto Sans KR';
+      ctx.fillText(text, 16, 38);
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+      sprite.position.set(x, y, z);
+      sprite.scale.set(2.4, 1.2, 1);
+      return sprite;
+    }
+
+    async function runSimulation() {
+      if (!state.orders.length) {
+        showToast('최소 1개 자재를 추가하십시오.');
+        return;
+      }
+      const formData = new FormData();
+      state.orders.forEach((order) => {
+        formData.append('material_key', order.material_key);
+        formData.append('quantity[]', String(order.quantity));
+      });
+      elements.runButton.disabled = true;
+      elements.runButton.textContent = '계산 중...';
+      try {
+        const response = await fetch('/run', { method: 'POST', body: formData });
+        const payload = await response.json();
+        if (!response.ok) {
+          showToast(payload.error || '실행 중 오류가 발생했습니다.');
+          return;
+        }
+        state.lastResult = payload;
+        renderResults(payload);
+        showToast('최적 배차 결과를 반영했습니다.');
+      } catch (error) {
+        showToast('서버 연결에 실패했습니다.');
+      } finally {
+        elements.runButton.disabled = false;
+        elements.runButton.textContent = '최적 배차 실행';
+      }
+    }
+
+    document.getElementById('addOrderButton').addEventListener('click', addOrder);
+    document.getElementById('runButton').addEventListener('click', runSimulation);
+    elements.quantityInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addOrder();
+      }
+    });
+    document.querySelectorAll('.view-tabs button').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.view-tabs button').forEach((node) => node.classList.toggle('active', node === button));
+        const mode = button.dataset.view;
+        elements.twoDStack.style.display = mode === '2d' ? 'grid' : 'none';
+        elements.threeShell.classList.toggle('active', mode === '3d');
+      });
+    });
+    document.querySelectorAll('#mobileNav button').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('#mobileNav button').forEach((node) => node.classList.toggle('active', node === button));
+        const target = button.dataset.target;
+        document.querySelectorAll('[data-mobile-panel]').forEach((panel) => {
+          panel.classList.toggle('mobile-active', panel.dataset.mobilePanel === target);
+        });
+      });
+    });
+    renderOrders();
+  </script>
+</body>
+</html>
