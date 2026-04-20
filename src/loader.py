@@ -188,8 +188,9 @@ def _make_stacks(order_items: Iterable[dict[str, Any]], material_db: dict[str, A
         # 1. Total pallets needed
         num_pallets = math.ceil(total_qty / items_per_pallet)
 
-        # 2. stack_limit=0 → 제한 없음(팔레트 전체를 하나의 스택으로)
-        stack_limit_pallets = stack_limit_raw if stack_limit_raw > 0 else num_pallets
+        # 2. stack_limit=0 → 제한 없음: 1팔레트=1스택으로 분리 (BFD가 수직 배치 결정)
+        #    stack_limit=N → N팔레트씩 묶어서 스택 생성
+        stack_limit_pallets = stack_limit_raw if stack_limit_raw > 0 else 1
 
         # 3. Group pallets into stacks
         num_stacks = math.ceil(num_pallets / stack_limit_pallets)
@@ -223,19 +224,81 @@ def _make_stacks(order_items: Iterable[dict[str, Any]], material_db: dict[str, A
                 "delivery_group": mat.get("delivery_group", 0),
                 "num_pallets": pallets_in_this_stack,
                 "stack_limit": stack_limit_raw,
+                "unit_thickness_mm": unit_thickness,
+                "sheets_per_pallet": items_per_pallet,
+                "is_upper_layer": False,
             })
             
     return stacks
 
 
 def _plan_loading_from_stacks(selected_vehicle: dict[str, Any], stacks: list[dict[str, Any]]) -> dict[str, Any]:
+    truck_h = float(selected_vehicle["cargo_height_mm"])
     engine = PackingEngine(
         float(selected_vehicle["cargo_width_mm"]),
         float(selected_vehicle["cargo_length_mm"]),
-        float(selected_vehicle["cargo_height_mm"])
+        truck_h,
     )
-    
+
     placements, unplaced = engine.pack(stacks)
+
+    # ── 상층 자동 분할 (Upper Layer Auto-Split) ──────────────────
+    # 미배치 스택이 있고 수직 여유가 있으면, 자재별 잔여 장수 전체를
+    # 상층 높이에 맞는 팔레트로 재생성하여 배치
+    upper_layer_split_applied = False
+    if unplaced and placements:
+        current_max_h = max(p["z"] + p["height_mm"] for p in placements)
+        avail_top_h = truck_h - current_max_h
+
+        if avail_top_h > 0:
+            # 자재별로 미배치 팔레트 묶기
+            unplaced_by_mat: dict[str, list[dict[str, Any]]] = {}
+            other_unplaced: list[dict[str, Any]] = []
+
+            for item in unplaced:
+                unit_thick = float(item.get("unit_thickness_mm", 0))
+                sheets_per = int(item.get("sheets_per_pallet", 0))
+                if unit_thick > 0 and sheets_per > 0 and avail_top_h >= unit_thick:
+                    unplaced_by_mat.setdefault(item["material_key"], []).append(item)
+                else:
+                    other_unplaced.append(item)
+
+            split_items: list[dict[str, Any]] = []
+
+            for mat_key, mat_items in unplaced_by_mat.items():
+                unit_thick = float(mat_items[0].get("unit_thickness_mm", 0))
+                sheets_per = int(mat_items[0].get("sheets_per_pallet", 0))
+                top_sheets = min(math.floor(avail_top_h / unit_thick), sheets_per)
+
+                if top_sheets <= 0:
+                    other_unplaced.extend(mat_items)
+                    continue
+
+                # 미배치 팔레트 전체 장수 합산 → 올바른 수의 상층 팔레트 생성
+                total_remaining_sheets = sum(
+                    item.get("num_pallets", 1) * sheets_per for item in mat_items
+                )
+                n_upper_pallets = math.ceil(total_remaining_sheets / top_sheets)
+                unit_pallet_wt = mat_items[0]["weight_kg"] / max(mat_items[0].get("num_pallets", 1), 1)
+                sheets_left = total_remaining_sheets
+
+                for _ in range(n_upper_pallets):
+                    s = min(top_sheets, sheets_left)
+                    split_items.append({
+                        **mat_items[0],
+                        "height_mm": unit_thick * s,
+                        "weight_kg": unit_pallet_wt * (s / sheets_per),
+                        "num_pallets": 1,
+                        "is_upper_layer": True,
+                    })
+                    sheets_left -= s
+
+            if split_items:
+                new_placements, remaining = engine.pack(split_items)
+                placements.extend(new_placements)
+                unplaced = remaining + other_unplaced
+                upper_layer_split_applied = bool(new_placements)
+    # ─────────────────────────────────────────────────────────────
 
     truck_l = float(selected_vehicle["cargo_length_mm"])
     truck_w = float(selected_vehicle["cargo_width_mm"])
@@ -491,6 +554,7 @@ def _plan_loading_from_stacks(selected_vehicle: dict[str, Any], stacks: list[dic
         "mix_group_violation": mix_group_violation,
         "fragile_bottom_pressure": fragile_bottom_pressure,
         "stack_limit_exceeded": stack_limit_exceeded,
+        "upper_layer_split_applied": upper_layer_split_applied,
         "layer_count": len(engine.layers)
     }
     
