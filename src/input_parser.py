@@ -117,8 +117,8 @@ def process_orders(
                 "pallet_count": pallet_count,
                 "total_weight_kg": item_weight_kg,
                 "total_volume_m3": item_volume_m3,
-                "mix_group": str(material["혼적불가그룹"]),
-                "handling_grade": str(material["취급등급"]),
+                "mix_group": str(material.get("mix_group", "")),
+                "handling_grade": str(material.get("취급등급", "B")),
             }
         )
 

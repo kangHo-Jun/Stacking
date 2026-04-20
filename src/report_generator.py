@@ -25,11 +25,15 @@ def _build_report_payload(
     category_levels = dict(risk_result["category_levels"])
     total_pallets = sum(int(item.get("pallet_count", 0)) for item in order_result["items"])
 
+    unplaced = load_result.get("unplaced", [])
+    
     return {
         "차량": selected_vehicle["vehicle_name"],
         "총운임": int(selection_result["total_freight_krw"]),
         "총중량": float(order_result["total_weight_kg"]),
         "팔레트수": total_pallets,
+        "레이어수": int(load_result.get("layer_count", 0)),
+        "미배치": len(unplaced),
         "위험도": risk_result["final_level"],
         "현장매뉴얼": risk_result["manual"],
         "편차": {
@@ -43,6 +47,17 @@ def _build_report_payload(
             RISK_LABELS[key]: value
             for key, value in category_levels.items()
         },
+        "미배치목록": [u["material_key"] for u in unplaced],
+        "비교근거": [
+            {"차량": name, "사유": reason}
+            for name, reason in selection_result.get("rejection_reasons", {}).items()
+        ],
+        "보정정보": {
+            "단계": load_result.get("correction_stage", "Fix0"),
+            "이동거리": f"+{load_result.get('shift_mm_applied', 0)}mm",
+            "리스크개선": load_result.get("risk_resolved", "N"),
+            "동적COG": f"{load_result.get('dynamic_cog_pct', 0.0):.1f}%"
+        }
     }
 
 
@@ -119,12 +134,15 @@ def generate_fleet_report(
         risk_result = vehicle_risk["risk_result"]
         vehicle_name = vehicle_risk["vehicle_name"]
         pallets = vehicle_risk.get("assigned_pallets", [])
+        unplaced = load_result.get("unplaced", [])
         vehicle_sections.append(
             {
                 "차량": vehicle_name,
                 "인스턴스": vehicle_risk.get("instance_id"),
                 "총중량": float(load_result["total_weight_kg"]),
                 "팔레트수": len(pallets),
+                "레이어수": int(load_result.get("layer_count", 0)),
+                "미배치": len(unplaced),
                 "위험도": risk_result["final_level"],
                 "현장매뉴얼": risk_result["manual"],
                 "편차": {
@@ -139,9 +157,15 @@ def generate_fleet_report(
                     for key, value in risk_result["category_levels"].items()
                 },
                 "팔레트순서": [
-                    pallet["material_key"]
-                    for pallet in pallets
+                    {
+                        "key": p["material_key"],
+                        "rotated": p.get("is_rotated", False),
+                        "layer": p.get("layer_id", 0),
+                        "coords": f"({p.get('x',0)}, {p.get('y',0)}, {p.get('z',0)})"
+                    }
+                    for p in load_result.get("placements", [])
                 ],
+                "미배치목록": [u["material_key"] for u in unplaced]
             }
         )
 
@@ -160,6 +184,10 @@ def generate_fleet_report(
         "혼적위반": any(section["혼적위반"] for section in vehicle_sections),
         "축중초과": any(section["축중초과"] for section in vehicle_sections),
         "항목별위험도": vehicle_sections[0]["항목별위험도"] if vehicle_sections else {},
+        "비교근거": [
+            {"차량": name, "사유": reason}
+            for name, reason in selection_result.get("rejection_reasons", {}).items()
+        ],
         "차량별결과": vehicle_sections,
     }
 
@@ -176,10 +204,14 @@ def generate_fleet_report(
         lines.append(f"차량명: {section['차량']}")
         lines.append(f"중량: {section['총중량']:.1f}kg")
         lines.append(f"팔레트: {section['팔레트수']}")
+        lines.append(f"레이어: {section['레이어수']}")
+        if section["미배치"] > 0:
+            lines.append(f"미배치: {section['미배치']}개 ({', '.join(section['미배치목록'])})")
         lines.append(f"위험도: {section['위험도']}")
-        lines.append("팔레트 순서:")
-        for index, pallet in enumerate(section["팔레트순서"], start=1):
-            lines.append(f"{index}. {pallet}")
+        lines.append("팔레트 배치/회전:")
+        for index, p in enumerate(section["팔레트순서"], start=1):
+            rotated_str = "(회전)" if p["rotated"] else ""
+            lines.append(f"{index}. L{p['layer']} {p['key']} {p['coords']} {rotated_str}")
         lines.append(f"현장 조치: {section['현장매뉴얼']}")
         lines.append("")
 

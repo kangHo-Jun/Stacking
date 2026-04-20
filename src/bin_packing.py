@@ -4,6 +4,8 @@ import csv
 from pathlib import Path
 from typing import Iterable
 
+from loader import plan_loading
+
 
 def _parse_float(value: str, default: float = 0.0) -> float:
     cleaned = value.strip()
@@ -63,6 +65,19 @@ def evaluate_vehicle_feasibility(
             reasons.append("총 중량이 차량 최대적재중량을 초과합니다.")
         if total_volume_m3 > cargo_volume_m3:
             reasons.append("총 부피가 적재함 부피를 초과합니다.")
+            
+        # V10.2 Geometric & Stability Pre-Check
+        if not reasons:
+            try:
+                load_result = plan_loading(vehicle, order_items)
+                if load_result.get("unplaced"):
+                    reasons.append(f"기하학적 배치 불가 (미배치 {len(load_result['unplaced'])}개 스택)")
+                
+                # V10.2.6 Dynamic Stability Check
+                if load_result.get("dynamic_cog_pct", 0.0) > 60.0:
+                    reasons.append(f"안정성 미달 (동적 COG {load_result['dynamic_cog_pct']:.1f}% > 60%)")
+            except Exception as e:
+                reasons.append(f"배치 엔진 오류: {str(e)}")
 
         evaluations.append(
             {

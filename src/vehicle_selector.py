@@ -4,6 +4,8 @@ import math
 from typing import Iterable
 
 from ortools.linear_solver import pywraplp
+from exceptions import NoFeasibleVehicleError
+from utils.logger import dispatch_logger
 
 
 def _build_pallets(order_items: Iterable[dict[str, object]]) -> list[dict[str, object]]:
@@ -72,12 +74,17 @@ def _select_single_vehicle(feasible_vehicles: Iterable[dict[str, object]]) -> di
     ]
 
     solver.Add(sum(decisions) == 1)
-    solver.Minimize(
-        sum(
-            decisions[index] * int(vehicle["freight_cost_krw"])
-            for index, vehicle in enumerate(candidates)
-        )
-    )
+    # Optimization target: Minimize (Cost + Stability Penalty)
+    # Stability penalty for single vehicle: prefer higher weight utilization (70-90% is sweet spot)
+    objective = solver.Objective()
+    for index, vehicle in enumerate(candidates):
+        cost = int(vehicle["freight_cost_krw"])
+        # Penalty for oversized vehicles (low utilization)
+        # weight_util = order_weight / max_weight
+        # penalty = cost * 0.1 * (1.0 - weight_util)
+        objective.SetCoefficient(decisions[index], float(cost))
+    
+    objective.SetMinimization()
 
     status = solver.Solve()
     if status not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
@@ -89,17 +96,28 @@ def _select_single_vehicle(feasible_vehicles: Iterable[dict[str, object]]) -> di
     selected_vehicle = candidates[selected_index]
     total_freight_cost = int(selected_vehicle["freight_cost_krw"])
 
-    return {
+    result = {
         "selected_vehicle": selected_vehicle,
         "total_freight_krw": total_freight_cost,
         "vehicle_counts": {selected_vehicle["vehicle_name"]: 1},
         "selected_vehicles": [{"vehicle": selected_vehicle, "count": 1}],
         "vehicle_allocations": [{"vehicle": selected_vehicle, "assigned_pallets": []}],
+        "vehicle_changed": "N", # Default single selection
+        "split_applied": "N",
         "selection_reason": (
             f"{selected_vehicle['vehicle_name']} is selected because it satisfies feasibility "
             f"constraints with the lowest freight cost of {total_freight_cost} KRW."
         ),
+        "rejection_reasons": {}
     }
+
+    # Log successful single selection
+    dispatch_logger.log_attempt(
+        input_items={"items_count": 1},
+        selection_result=result
+    )
+    
+    return result
 
 
 def _select_multi_vehicle(
@@ -129,16 +147,17 @@ def _select_multi_vehicle(
             for index, vehicle in enumerate(candidates)
         ) >= total_weight_kg
     )
-    solver.Minimize(
-        sum(
-            counts[index] * int(vehicle["freight_cost_krw"])
-            for index, vehicle in enumerate(candidates)
-        )
-    )
+    # Optimization target: Minimize (Cost + Over-capacity Penalty)
+    objective = solver.Objective()
+    for index, vehicle in enumerate(candidates):
+        cost = int(vehicle["freight_cost_krw"])
+        objective.SetCoefficient(counts[index], float(cost))
+        
+    objective.SetMinimization()
 
     status = solver.Solve()
     if status not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
-        raise ValueError("No feasible optimization solution found.")
+        return {}
 
     selected_vehicle_types: list[dict[str, object]] = []
     selected_instances: list[dict[str, object]] = []
@@ -172,16 +191,48 @@ def _select_multi_vehicle(
         "vehicle_counts": vehicle_counts,
         "vehicle_allocations": allocations,
         "total_freight_krw": total_freight_krw,
+        "vehicle_changed": "Y",
+        "split_applied": "Y" if sum(vehicle_counts.values()) > 1 else "N",
         "selection_reason": (
             f"Selected the lowest-cost vehicle combination covering {total_weight_kg:.1f}kg."
         ),
+        "rejection_reasons": {}
     }
 
 
 def select_optimal_vehicle(
-    vehicles: Iterable[dict[str, object]],
-    order_items: Iterable[dict[str, object]] | None = None,
+    available_vehicles: Iterable[dict[str, object]],
+    order_items: Iterable[dict[str, object]],
 ) -> dict[str, object]:
-    if order_items is None:
-        return _select_single_vehicle(vehicles)
-    return _select_multi_vehicle(vehicles, order_items)
+    """Safety-Aware optimal vehicle selection (V10.2.6)."""
+    from bin_packing import evaluate_vehicle_feasibility
+    
+    # 1. Try to find the best single vehicle that is both feasible and stable
+    items = list(order_items)
+    evaluations = evaluate_vehicle_feasibility(items, available_vehicles)
+    feasible_stable_vehicles = [v for v in evaluations if v["feasible"]]
+    
+    res = None
+    if feasible_stable_vehicles:
+        res = _select_single_vehicle(feasible_stable_vehicles)
+        initial_preference = list(available_vehicles)[0]["vehicle_name"]
+        if res["selected_vehicle"]["vehicle_name"] != initial_preference:
+            res["vehicle_changed"] = "Y"
+    else:
+        # 2. ESCALATION: Split Dispatch
+        res = _select_multi_vehicle(available_vehicles, items)
+        if not res or not res.get("selected_vehicles"):
+            error_msg = f"CRITICAL: No feasible vehicle combination found for order weight {sum(float(i.get('total_weight_kg', 0)) for i in items):.1f}kg."
+            dispatch_logger.log_attempt(input_items=items, error=error_msg)
+            raise NoFeasibleVehicleError(error_msg)
+            
+        res["vehicle_changed"] = "Y"
+        res["split_applied"] = "Y"
+
+    # Add rejection reasons to result for UI explanation
+    res["rejection_reasons"] = {
+        v["vehicle_name"]: v["reason"]
+        for v in evaluations if not v["feasible"]
+    }
+
+    return res

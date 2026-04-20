@@ -8,8 +8,7 @@ from pathlib import Path
 
 from flask import Flask, Response, flash, redirect, render_template, request, url_for
 
-from bin_packing import filter_feasible_vehicles, load_vehicle_db
-from input_parser import load_material_db, process_orders
+from data_manager import data_manager
 from loader import plan_fleet_loading, plan_loading
 from report_generator import generate_fleet_report, generate_report
 from risk_evaluator import evaluate_fleet_risk, evaluate_risk
@@ -62,13 +61,14 @@ def init_history_db() -> None:
 
 
 def get_material_options() -> list[str]:
-    material_db = load_material_db(DATA_DIR / "자재정보.csv")
+    material_db = data_manager.get_material_db()
     return sorted(material_db.keys())
 
 
 def run_pipeline(orders: list[dict[str, object]]) -> dict[str, object]:
-    material_db = load_material_db(DATA_DIR / "자재정보.csv")
-    vehicle_db = load_vehicle_db(DATA_DIR / "차량정보.csv")
+    from input_parser import process_orders
+    material_db = data_manager.get_material_db()
+    vehicle_db = data_manager.get_vehicle_db()
 
     order_result = process_orders(material_db, orders)
     selection_result = select_optimal_vehicle(vehicle_db, order_result["items"])

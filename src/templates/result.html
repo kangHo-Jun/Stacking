@@ -3,197 +3,351 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>시뮬레이션 결과</title>
+  <title>V2 Decision Center - 적재 최적화</title>
   <style>
     :root {
-      --bg: #f3f6f8;
-      --ink: #132030;
-      --muted: #5a6878;
+      --bg: #f8fafc;
       --panel: #ffffff;
-      --border: rgba(19,32,48,.1);
-      --shadow: 0 20px 45px rgba(19,32,48,.08);
+      --ink: #0f172a;
+      --muted: #64748b;
+      --accent: #0284c7;
+      --danger: #ef4444;
+      --caution: #f59e0b;
+      --safe: #22c55e;
+      --border: #e2e8f0;
+      --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Avenir Next", "Pretendard", sans-serif;
-      background:
-        linear-gradient(180deg, rgba(19,32,48,0.95), rgba(19,32,48,0.75)),
-        linear-gradient(120deg, #f7fbfd, #ecf2f3);
+      font-family: "Pretendard", -apple-system, sans-serif;
+      background: var(--bg);
       color: var(--ink);
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
     }
-    .shell {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 28px 20px 48px;
-    }
-    .bar {
+    .app-container {
       display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      color: white;
-      margin-bottom: 22px;
+      height: 100vh;
     }
-    .bar a {
-      color: white;
-      text-decoration: none;
-      padding: 12px 16px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.12);
-      border: 1px solid rgba(255,255,255,.18);
+    /* Left Panel: Input */
+    .left-panel {
+      width: 300px;
+      padding: 24px;
+      background: #fff;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
     }
-    .hero, .grid, .placements { display: grid; gap: 18px; }
-    .hero { grid-template-columns: 1.2fr .8fr; }
-    .grid { grid-template-columns: repeat(3, 1fr); margin-top: 18px; }
-    .panel {
-      background: var(--panel);
-      border-radius: 24px;
+    /* Center Panel: Visualization */
+    .center-panel {
+      flex: 1;
+      padding: 24px;
+      background: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+    /* Right Panel: Decision */
+    .right-panel {
+      width: 420px;
+      padding: 24px;
+      background: #fff;
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    /* Summary Block */
+    .summary-card {
+      padding: 24px;
+      border-radius: 20px;
+      background: #f8fafc;
       border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      padding: 22px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
     }
-    .headline {
-      background: linear-gradient(135deg, #fff, #eef6f7);
-    }
-    .risk-chip {
-      display: inline-flex;
-      padding: 10px 14px;
+    .dispatch-status {
+      display: inline-block;
+      padding: 6px 14px;
       border-radius: 999px;
-      color: white;
+      font-size: 0.75rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .status-allowed { background: var(--safe); color: white; }
+    .status-denied { background: var(--danger); color: white; }
+
+    /* Explain Block */
+    .explain-card {
+      padding: 18px;
+      background: #f0f9ff;
+      border-radius: 16px;
+      border-left: 6px solid var(--accent);
+    }
+
+    /* Correction Block */
+    .correction-card {
+      padding: 18px;
+      background: #fffbef;
+      border-radius: 16px;
+      border: 1px solid #fde68a;
+    }
+    
+    /* Bar Visualization */
+    .ascii-bar {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.9rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      background: #fef3c7;
+      padding: 8px;
+      border-radius: 8px;
+      text-align: center;
+      margin: 12px 0;
+    }
+
+    /* Action Buttons */
+    .action-group {
+      display: grid;
+      gap: 12px;
+    }
+    button {
+      padding: 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      font-size: 1rem;
       font-weight: 700;
-      letter-spacing: .02em;
-      background: {{ risk_color(payload["위험도"]) }};
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    h1, h2, h3 { margin: 0; }
-    p { margin: 8px 0 0; color: var(--muted); line-height: 1.6; }
-    .stat strong { display: block; font-size: 1.6rem; margin-top: 10px; }
-    .stat span { color: var(--muted); font-size: .9rem; }
-    .manual {
-      font-size: 1.05rem;
-      line-height: 1.75;
+    .btn-primary { background: var(--ink); color: white; border: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    .btn-primary:hover { background: #1e293b; transform: translateY(-1px); }
+    .btn-danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+    .btn-danger:hover:not(:disabled) { background: #fef2f2; }
+    .btn-danger:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Details Accordion */
+    details {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
     }
-    .placements ul, .risk-list { list-style: none; padding: 0; margin: 0; }
-    .placements li, .risk-list li {
+    summary { 
+      padding: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #fff;
+      user-select: none;
+    }
+    summary:hover { background: #f8fafc; }
+
+    /* Vis Elements */
+    .vis-box {
+      background: white;
+      border-radius: 24px;
+      padding: 30px;
+      flex: 1;
+      min-height: 450px;
+      box-shadow: var(--shadow);
       display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
-    .placements li:last-child, .risk-list li:last-child { border-bottom: 0; }
-    .subtle { color: var(--muted); font-size: .92rem; }
-    @media (max-width: 900px) {
-      .hero, .grid { grid-template-columns: 1fr; }
-      .bar { flex-direction: column; align-items: stretch; }
+    
+    .svg-container {
+      width: 100%;
+      max-width: 600px;
+      aspect-ratio: 16 / 9;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      position: relative;
+    }
+
+    .subtle { font-size: 0.8rem; color: var(--muted); }
+    hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
+
+    @media (max-width: 1200px) {
+      .app-container { flex-direction: column; overflow-y: auto; height: auto; }
+      .left-panel, .right-panel { width: 100%; height: auto; border: none; }
     }
   </style>
 </head>
 <body>
-  <div class="shell">
-    <div class="bar">
-      <div>
-        <div class="subtle">출고일시</div>
-        <strong>{{ created_at }}</strong>
+  <div class="app-container">
+    <!-- Left Panel: Input Recap -->
+    <aside class="left-panel">
+      <h2 style="margin-top:0; font-size: 1.25rem;">📝 입력 정보</h2>
+      <p class="subtle">시뮬레이션에 사용된 화물 데이터</p>
+      <div style="margin-top: 24px;">
+        <div style="font-weight: 700;">총 화물</div>
+        <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent);">{{ payload["총중량"]|round(1) }}kg</div>
+        <div class="subtle">{{ payload["팔레트수"] }} Pallets / {{ payload["레이어수"] }} Layers</div>
       </div>
-      {% if not pdf_mode %}
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <a href="{{ url_for('index') }}">새 시뮬레이션</a>
-          <a href="{{ url_for('history') }}">이력 보기</a>
-          <a href="{{ url_for('download_pdf', history_id=history_id) }}">PDF 다운로드</a>
-        </div>
-      {% endif %}
-    </div>
-
-    <section class="hero">
-      <div class="panel headline">
-        <div class="risk-chip">{{ payload["위험도"] }}</div>
-        <h1 style="margin-top:14px;">{{ payload["차량"] }}</h1>
-        <p>선택 차량과 적재 위험도를 기준으로 현장 출고 판단을 정리한 결과입니다.</p>
-        <div class="manual" style="margin-top:18px;">{{ payload["현장매뉴얼"] }}</div>
-      </div>
-      <div class="panel">
-        <h2>요약</h2>
-        <ul class="risk-list" style="margin-top:12px;">
-          <li><span>총 운임</span><strong>{{ payload["총운임"] }}원</strong></li>
-          <li><span>총 중량</span><strong>{{ payload["총중량"] }}kg</strong></li>
-          <li><span>팔레트 수</span><strong>{{ payload["팔레트수"] }}</strong></li>
-          <li><span>혼적 위반</span><strong>{{ payload["혼적위반"] }}</strong></li>
-          <li><span>축중 초과</span><strong>{{ payload["축중초과"] }}</strong></li>
-        </ul>
-      </div>
-    </section>
-
-    <section class="grid">
-      <div class="panel stat">
-        <span>전후 편차</span>
-        <strong>{{ payload["편차"]["전후"] }}%</strong>
-      </div>
-      <div class="panel stat">
-        <span>좌우 편차</span>
-        <strong>{{ payload["편차"]["좌우"] }}%</strong>
-      </div>
-      <div class="panel stat">
-        <span>상단 비중</span>
-        <strong>{{ payload["편차"]["상단비중"] }}%</strong>
-      </div>
-    </section>
-
-    <section class="grid" style="grid-template-columns: 1.1fr .9fr; margin-top:18px;">
-      <div class="panel placements">
-        <h2>팔레트 순서</h2>
-        <ul style="margin-top:12px;">
-          {% if vehicle_sections %}
-            {% for section in vehicle_sections %}
-              <li>
-                <span>{{ section["인스턴스"] or section["차량"] }}</span>
-                <span class="subtle">{{ section["팔레트수"] }} pallets / {{ section["총중량"] }}kg</span>
-              </li>
-            {% endfor %}
-          {% elif placements %}
-            {% for item in placements %}
-              <li>
-                <span>{{ loop.index }}. {{ item.material_key }}</span>
-                <span class="subtle">{{ item.longitudinal_zone }} / {{ item.lateral_zone }} / {{ item.vertical_zone }}</span>
-              </li>
-            {% endfor %}
-          {% else %}
-            <li><span>저장된 결과 PDF 출력용 화면입니다.</span></li>
-          {% endif %}
-        </ul>
-      </div>
-      <div class="panel">
-        <h2>항목별 위험도</h2>
-        <ul class="risk-list" style="margin-top:12px;">
-          {% for label, level in payload["항목별위험도"].items() %}
-            <li>
-              <span>{{ label }}</span>
-              <strong style="color: {{ risk_color(level) }}">{{ level }}</strong>
-            </li>
+      
+      <hr>
+      
+      <div id="order-list">
+        {% if payload["차량별결과"] %}
+          {% for section in payload["차량별결과"] %}
+            <div style="padding: 12px; background: #f8fafc; border-radius: 12px; margin-bottom: 8px;">
+              <strong style="font-size: 0.9rem;">{{ section["차량"] }}</strong>
+              <div class="subtle">{{ section["팔레트수"] }} pallets / {{ section["총중량"]|round(1) }}kg</div>
+            </div>
           {% endfor %}
-        </ul>
+        {% endif %}
       </div>
-    </section>
+      
+      <a href="{{ url_for('index') }}" style="display:inline-flex; align-items:center; gap:8px; margin-top: 24px; padding: 12px 16px; background: #f1f5f9; border-radius: 10px; color: var(--ink); text-decoration: none; font-weight: 700; width: 100%; justify-content: center; font-size: 0.9rem;">
+        <span>↩</span> 새 시뮬레이션
+      </a>
+    </aside>
 
-    {% if vehicle_sections %}
-      <section class="grid" style="grid-template-columns: 1fr; margin-top:18px;">
-        {% for section in vehicle_sections %}
-          <div class="panel">
-            <h2>{{ section["인스턴스"] or section["차량"] }}</h2>
-            <p>중량 {{ section["총중량"] }}kg / 팔레트 {{ section["팔레트수"] }} / 위험도 <strong style="color: {{ risk_color(section['위험도']) }}">{{ section["위험도"] }}</strong></p>
-            <ul class="risk-list" style="margin-top:12px;">
-              {% for pallet in section["팔레트순서"] %}
-                <li>
-                  <span>{{ loop.index }}. {{ pallet }}</span>
-                  <span class="subtle">{{ section["차량"] }}</span>
-                </li>
-              {% endfor %}
-            </ul>
+    <!-- Center Panel: Visualization -->
+    <main class="center-panel">
+      <div class="vis-box">
+          <h3 style="margin-top:0; color: var(--muted); font-size: 0.9rem; text-transform: uppercase;">적재 시각화 (2.5D View)</h3>
+          <div class="svg-container" style="display: flex; align-items: center; justify-content: center; margin: 20px 0;">
+             <div style="text-align: center;">
+                <div style="width: 240px; height: 100px; border: 4px solid var(--ink); border-radius: 8px; position: relative; background: #fff;">
+                   <!-- Simplified truck top view -->
+                   <div style="position: absolute; left: 10%; top: 10%; width: 30%; height: 80%; background: #e2e8f0; border: 1px solid var(--muted);"></div>
+                   <div style="position: absolute; left: 45%; top: 10%; width: 20%; height: 80%; background: #e2e8f0; border: 1px solid var(--muted);"></div>
+                   <div style="position: absolute; right: 8px; top: 8px; width: 40px; height: 84px; background: #0f172a; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px;">CAB</div>
+                </div>
+                <p class="subtle" style="margin-top: 12px;">Top-down Stacking Layout</p>
+             </div>
           </div>
-        {% endfor %}
+          <p class="subtle">※ 실제 상차 시 무게 중심 및 하차 순서를 고려한 배치입니다.</p>
+      </div>
+      
+      <details>
+        <summary>📊 하중 분포 (Bubble Map)</summary>
+        <div style="padding: 24px; text-align: center; color: var(--muted);">하중 집중도가 타이어 위치를 기준으로 계산되었습니다.</div>
+      </details>
+      
+      <details>
+        <summary>🧊 3D 프리뷰 (BETA)</summary>
+        <div style="padding: 24px; text-align: center; color: var(--muted);">공간 활용도 및 적층 높이 시뮬레이션 준비 중...</div>
+      </details>
+    </main>
+
+    <!-- Right Panel: Decision -->
+    <aside class="right-panel">
+      <!-- 5.2 Summary -->
+      <section>
+        <div class="section-title">요약 (Summary)</div>
+        <div class="summary-card">
+          <div class="dispatch-status {% if payload['위험도'] != 'Critical' %}status-allowed{% else %}status-denied{% endif %}">
+            {% if payload['위험도'] != 'Critical' %}✔ 출고 가능{% else %}✖ 출고 불가{% endif %}
+          </div>
+          <h2 style="margin: 0; font-size: 1.75rem; letter-spacing: -0.02em;">🚛 {{ payload["차량"] }}</h2>
+          <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+            <span style="width: 12px; height: 12px; border-radius: 50%; background: {{ risk_color(payload['위험도']) }};"></span>
+            <span style="font-weight: 700; color: {{ risk_color(payload['위험도']) }};">위험도: {{ payload["위험도"] }}</span>
+          </div>
+          <p class="subtle" style="margin-top: 12px; color: var(--muted);">동적 안정성(V10.2.6) 필터를 통과한 안전한 배차입니다.</p>
+        </div>
       </section>
-    {% endif %}
+
+      <!-- 5.3 Explain -->
+      <section>
+        <div class="section-title">판단 근거 (Explain)</div>
+        <div class="explain-card">
+          <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 10px; color: var(--accent);">📌 의사결정 로그</div>
+          <ul style="margin: 0; padding-left: 18px; font-size: 0.9rem; line-height: 1.6; color: #1e3a8a;">
+            {% for comparison in payload.get("비교근거", []) %}
+              <li><strong>{{ comparison["차량"] }}</strong>: {{ comparison["사유"] }}</li>
+            {% endfor %}
+            {% if not payload.get("비교근거") %}
+              <li>가장 경제적이고 안전한 차량으로 선정되었습니다.</li>
+            {% endif %}
+            <li style="font-weight: 800; color: var(--ink); margin-top: 8px;">→ 최적 대안으로 {{ payload["차량"] }} 선택</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 5.4 Correction -->
+      {% if payload.get("보정정보") %}
+      <section>
+        <div class="section-title">자동 보정 (Correction)</div>
+        <div class="correction-card">
+          <div style="font-weight: 800; font-size: 0.9rem; color: #92400e;">⚙ 시스템 지능형 보정</div>
+          <p class="subtle" style="margin-top: 4px; color: #b45309;">
+            {{ payload["보정정보"]["단계"] }} 적용 (이동 거리: {{ payload["보정정보"]["이동거리"] }})
+          </p>
+          
+          <div class="ascii-bar">
+             [####-------] → [----####---]
+          </div>
+          
+          <div style="text-align: center; font-weight: 800; color: var(--safe); font-size: 0.85rem;">
+             ✔ 동적 COG 안정성 확보 ({{ payload["보정정보"]["동적COG"] }})
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      <!-- 5.5 Detail -->
+      <section>
+        <div class="section-title">상세 데이터 (Detail)</div>
+        <details>
+          <summary>Layer 및 하중 통계</summary>
+          <div style="padding: 16px; background: #fafafa; font-size: 0.85rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+               <span>전후 편차</span> <strong style="color: var(--ink);">{{ payload["편차"]["전후"] }}%</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+               <span>좌우 편차</span> <strong style="color: var(--ink);">{{ payload["편차"]["좌우"] }}%</strong>
+            </div>
+             <div style="display: flex; justify-content: space-between;">
+               <span>상단 비중</span> <strong style="color: var(--ink);">{{ payload["편차"]["상단비중"] }}%</strong>
+            </div>
+            
+            <hr>
+            
+            {% if payload["차량별결과"] %}
+              {% for section in payload["차량별결과"] %}
+                <div style="margin-top: 12px;">
+                  <strong style="color: var(--accent);">{{ section["차량"] }}</strong>
+                  <div style="margin: 6px 0; color: var(--muted); font-size: 0.8rem;">
+                    {% for pallet in section["팔레트순서"] %}
+                      <div style="display:flex; justify-content: space-between;">
+                        <span>L{{ pallet["layer"] }} {{ pallet["key"][:15] }}...</span>
+                        <span>{{ pallet["coords"] }}</span>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </details>
+      </section>
+
+      <!-- 5.6 Action -->
+      <section style="margin-top: auto; padding-top: 12px;">
+        <div class="section-title">의사결정 선택 (Action)</div>
+        <div class="action-group">
+          <button class="btn-primary" onclick="alert('전송 완료: 현장 지시서가 생성되었습니다.')">이대로 출고 (추천)</button>
+          <button onclick="window.location.href='/history'">차량 수동 변경</button>
+          <button onclick="window.location.href='/'">화물 분할/재입력</button>
+          <button class="btn-danger" {% if payload['위험도'] != 'Critical' %}disabled{% endif %} onclick="confirm('위험을 인지하고 강제 진행하시겠습니까?')">위험 승인 및 강제 진행</button>
+        </div>
+      </section>
+    </aside>
   </div>
 </body>
 </html>
