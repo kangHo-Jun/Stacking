@@ -51,7 +51,13 @@ def _get_col(row: dict, canonical: str, default: str = "") -> str:
 
 def _build_material_key(row: dict[str, str]) -> str:
     name = _normalize_text(row["자재명"])
-    spec = _get_col(row, "규격(mm)")
+    # 구글 시트 신규 컬럼(가로/세로 분리) 우선, 구버전(규격) fallback
+    if "가로(mm)" in row and "세로(mm)" in row:
+        w = _normalize_text(row["가로(mm)"])
+        l = _normalize_text(row["세로(mm)"])
+        spec = f"{w}x{l}"
+    else:
+        spec = _get_col(row, "규격(mm)")
     thickness = _get_col(row, "두께(mm)")
     return f"{name}_{spec}_{thickness}"
 
@@ -81,6 +87,32 @@ def _calculate_unit_volume_m3(spec: str, thickness: str) -> float | None:
     return (width_mm * length_mm * thickness_mm) / 1_000_000_000
 
 
+def _resolve_spec_and_volume(row: dict) -> tuple[str, float | None]:
+    """row에서 규격 문자열과 낱장부피(m3)를 계산해 반환합니다.
+    구글 시트 신규(가로/세로 분리) 및 구버전(규격(mm) 단일) 양쪽 지원.
+    """
+    thickness_val = _get_col(row, "두께(mm)")
+    thickness_mm = _parse_number(thickness_val)
+
+    # ── 신규 방식: 가로(mm) + 세로(mm) 분리 컬럼 ──
+    if "가로(mm)" in row and "세로(mm)" in row:
+        w_raw = _normalize_text(row["가로(mm)"])
+        l_raw = _normalize_text(row["세로(mm)"])
+        spec_str = f"{w_raw}x{l_raw}"
+        w = _parse_number(w_raw)
+        l = _parse_number(l_raw)
+        if w and l and thickness_mm:
+            volume = (w * l * thickness_mm) / 1_000_000_000
+        else:
+            volume = None
+        return spec_str, volume
+
+    # ── 구버전 방식: 규격(mm) 단일 컬럼 ──
+    spec_str = _get_col(row, "규격(mm)")
+    volume = _calculate_unit_volume_m3(spec_str, thickness_val)
+    return spec_str, volume
+
+
 def load_material_db(csv_path: str | Path) -> dict[str, dict[str, object]]:
     material_db: dict[str, dict[str, object]] = {}
     use_sheets = os.environ.get("USE_SHEETS", "").strip().lower() == "true"
@@ -94,7 +126,7 @@ def load_material_db(csv_path: str | Path) -> dict[str, dict[str, object]]:
 
     for row in rows:
         key = _build_material_key(row)
-        spec_val = _get_col(row, "규격(mm)")
+        spec_val, volume_val = _resolve_spec_and_volume(row)
         thickness_val = _get_col(row, "두께(mm)")
         pallet_qty_raw = _get_col(row, "팔레트당적재수", "1")
         material_db[key] = {
@@ -103,7 +135,7 @@ def load_material_db(csv_path: str | Path) -> dict[str, dict[str, object]]:
             "규격(mm)": spec_val,
             "두께(mm)": thickness_val,
             "낱장무게(kg)": _parse_number(_get_col(row, "낱장무게(kg)")),
-            "낱장부피(m3)": _calculate_unit_volume_m3(spec_val, thickness_val),
+            "낱장부피(m3)": volume_val,
             "팔레트당적재수": int(float(pallet_qty_raw) if pallet_qty_raw else 1),
             "팔레트무게(kg)": _parse_number(_get_col(row, "팔레트무게(kg)")),
             "취급등급": _get_col(row, "취급등급", "B"),
