@@ -182,13 +182,16 @@ def _make_stacks(order_items: Iterable[dict[str, Any]], material_db: dict[str, A
         mat = material_db.get(mat_key, {})
         
         items_per_pallet = int(mat.get("팔레트당적재수", 1))
-        stack_limit_pallets = int(mat.get("stack_limit", 1))
+        stack_limit_raw = int(mat.get("stack_limit", 0))
         total_qty = order["quantity"]
-        
+
         # 1. Total pallets needed
         num_pallets = math.ceil(total_qty / items_per_pallet)
-        
-        # 2. Group pallets into stacks
+
+        # 2. stack_limit=0 → 제한 없음(팔레트 전체를 하나의 스택으로)
+        stack_limit_pallets = stack_limit_raw if stack_limit_raw > 0 else num_pallets
+
+        # 3. Group pallets into stacks
         num_stacks = math.ceil(num_pallets / stack_limit_pallets)
         
         pallet_w = float(mat.get("width_mm", 1000.0))
@@ -218,7 +221,8 @@ def _make_stacks(order_items: Iterable[dict[str, Any]], material_db: dict[str, A
                 "priority": mat.get("priority", 3),
                 "is_dead_space": mat.get("is_dead_space", False),
                 "delivery_group": mat.get("delivery_group", 0),
-                "num_pallets": pallets_in_this_stack
+                "num_pallets": pallets_in_this_stack,
+                "stack_limit": stack_limit_raw,
             })
             
     return stacks
@@ -302,6 +306,11 @@ def _plan_loading_from_stacks(selected_vehicle: dict[str, Any], stacks: list[dic
     axle_overload_critical = any(load > 10_000 for load in axle_loads)
     mix_groups = {str(p["mix_group"]) for p in processed_placements if p["mix_group"]}
     mix_group_violation = any(conflict.issubset(mix_groups) for conflict in MIX_CONFLICTS)
+    # stack_limit > 0인 스택 중 num_pallets가 한도를 초과한 경우 감지
+    stack_limit_exceeded = any(
+        int(p.get("stack_limit", 0)) > 0 and int(p.get("num_pallets", 0)) > int(p.get("stack_limit", 0))
+        for p in processed_placements
+    )
     
     fragile_bottom_pressure = any(
         p["handling_grade"] == "A" and p["vertical_zone"] == "bottom" and top_weight > 0
@@ -481,6 +490,7 @@ def _plan_loading_from_stacks(selected_vehicle: dict[str, Any], stacks: list[dic
         "axle_overload_critical": axle_overload_critical,
         "mix_group_violation": mix_group_violation,
         "fragile_bottom_pressure": fragile_bottom_pressure,
+        "stack_limit_exceeded": stack_limit_exceeded,
         "layer_count": len(engine.layers)
     }
     

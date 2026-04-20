@@ -76,6 +76,7 @@ def load_material_db(csv_path: str | Path) -> dict[str, dict[str, object]]:
                 "방향고정": _normalize_text(row["방향고정"]),
                 "mix_group": _normalize_text(row.get("혼적그룹", row.get("혼적불가그룹", ""))),
                 "delivery_group": int(float(_normalize_text(row.get("하차그룹", "") or "0"))),
+                "stack_limit": int(float(_normalize_text(row.get("stack_limit", "") or "0"))),
             }
 
     return material_db

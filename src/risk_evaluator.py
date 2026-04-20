@@ -64,6 +64,7 @@ def evaluate_risk(load_result: dict[str, object]) -> dict[str, object]:
     axle_overload_critical = bool(load_result.get("axle_overload_critical", False))
     fragile_bottom_pressure = bool(load_result.get("fragile_bottom_pressure", False))
     mix_group_violation = bool(load_result.get("mix_group_violation", False))
+    stack_limit_exceeded = bool(load_result.get("stack_limit_exceeded", False))
 
     category_levels = {
         "overweight_risk": _weight_level(weight_ratio_pct),
@@ -74,6 +75,7 @@ def evaluate_risk(load_result: dict[str, object]) -> dict[str, object]:
         "top_share": _top_share_level(top_share_pct),
         "fragile_bottom_pressure": "Danger" if fragile_bottom_pressure else "Safe",
         "mix_group_violation": "Danger" if mix_group_violation else "Safe",
+        "stack_limit_exceeded": "Caution" if stack_limit_exceeded else "Safe",
     }
     final_level = _highest_level(list(category_levels.values()))
     manual = {
