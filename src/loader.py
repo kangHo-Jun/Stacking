@@ -46,19 +46,18 @@ class PackingEngine:
 
     def pack(self, items: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         # Step 1: Pre-Process (Sorting)
-        # Sorting priority:
-        # 1. Delivery Group (Higher ID = Unloaded later/placed deeper or vice versa? 
-        #    User says "뒤쪽 -> 앞쪽". If BFD starts at 0,0 (front), we want Group 1 (front) first.
-        #    So sort by delivery_group ASC. (0 is special/no constraint))
-        # 2. is_dead_space (Y first)
-        # 3. priority (1 is highest)
-        # 4. area DESC
-        
+        # 하차그룹 규칙:
+        #   - dg > 0: 숫자가 작을수록 전방(먼저 실음, 나중에 하차)
+        #             숫자가 클수록 후방 입구(나중에 실음, 먼저 하차)
+        #   - dg = 0: 순서 무관 → 제약 있는 자재 이후에 배치
+        # BFD는 y=0(전방)부터 채우므로 먼저 정렬된 아이템이 전방에 배치됨
+        # → dg ASC 정렬: 작은 번호 전방, 큰 번호 후방, dg=0 최후방
+
         def sort_key(x):
-            dg = x.get("delivery_group", 0)
-            # Group 0 items are treated as neutral, but we want grouped delivery items together
+            dg = int(x.get("delivery_group", 0))
+            dg_order = dg if dg > 0 else 10_000  # dg=0(순서 무관)은 제약 그룹 이후
             return (
-                dg if dg > 0 else 999, # Delivery items first
+                dg_order,
                 not x.get("is_dead_space", False),
                 x.get("priority", 3),
                 -(float(x.get("width_mm", 0)) * float(x.get("length_mm", 0))),
