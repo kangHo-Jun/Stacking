@@ -48,7 +48,11 @@ def _layout_items(vehicle: dict[str, object], load_items: Iterable[dict[str, obj
 
     visual_items: list[dict[str, object]] = []
     for index, item in enumerate(items):
-        layer = index // slots_per_layer + 1
+        # loader.py가 부여한 실제 layer_id(0-indexed)를 사용 (없으면 인덱스 기반 fallback)
+        if "layer_id" in item:
+            layer = int(item["layer_id"]) + 1
+        else:
+            layer = index // slots_per_layer + 1
         slot_index = index % slots_per_layer
         column = slot_index // FLOOR_LANES
         lane = slot_index % FLOOR_LANES
@@ -124,7 +128,7 @@ def _build_side_view_svg(vehicle: dict[str, object], items: list[dict[str, objec
         f'<line x1="86" y1="{floor_y}" x2="840" y2="{floor_y}" stroke="#1e293b" stroke-width="5"/>',
     ]
     for layer in range(layer_count):
-        label = f"{layer_count - layer}층"
+        label = f"{layer + 1}층"
         label_y = floor_y - layer * layer_height - 18
         guide_y = floor_y - layer * layer_height
         parts.append(f'<text x="56" y="{label_y:.1f}" fill="#64748b" font-size="13" font-weight="700">{label}</text>')
