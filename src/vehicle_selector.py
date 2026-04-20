@@ -45,8 +45,24 @@ def _allocate_pallets_to_vehicles(
 
     for pallet in pallets:
         pallet_weight = float(pallet["weight_kg"])
+        pallet_mix_group = str(pallet.get("mix_group", ""))
+
+        # 혼적그룹이 같은(또는 비어있는) 차량만 후보로 선택
+        def _mix_group_compatible(allocation: dict) -> bool:
+            if not pallet_mix_group:
+                return True
+            for assigned in allocation["assigned_pallets"]:
+                existing_group = str(assigned.get("mix_group", ""))
+                if existing_group and existing_group != pallet_mix_group:
+                    return False
+            return True
+
+        compatible = [a for a in allocations if _mix_group_compatible(a)]
+        # 호환 차량이 없으면 전체 fallback (위반은 risk_evaluator에서 감지)
+        candidates = compatible if compatible else allocations
+
         candidate = min(
-            allocations,
+            candidates,
             key=lambda allocation: (
                 allocation["total_weight_kg"] / max(float(allocation["vehicle"]["max_weight_kg"]), 1.0),
                 len(allocation["assigned_pallets"]),

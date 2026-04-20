@@ -74,7 +74,7 @@ def load_material_db(csv_path: str | Path) -> dict[str, dict[str, object]]:
                 "팔레트무게(kg)": _parse_number(row["팔레트무게(kg)"]),
                 "취급등급": _normalize_text(row["취급등급"]),
                 "방향고정": _normalize_text(row["방향고정"]),
-                "혼적불가그룹": _normalize_text(row["혼적불가그룹"]),
+                "mix_group": _normalize_text(row.get("혼적그룹", row.get("혼적불가그룹", ""))),
             }
 
     return material_db

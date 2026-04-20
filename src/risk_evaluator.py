@@ -49,6 +49,12 @@ def _top_share_level(top_share_pct: float) -> str:
     return "Danger"
 
 
+def _has_mix_group_violation(assigned_pallets: list[dict]) -> bool:
+    """같은 차량에 서로 다른 혼적그룹이 섞여 있으면 True."""
+    groups = {str(p.get("mix_group", "")) for p in assigned_pallets if str(p.get("mix_group", ""))}
+    return len(groups) > 1
+
+
 def evaluate_risk(load_result: dict[str, object]) -> dict[str, object]:
     weight_ratio_pct = float(load_result.get("weight_ratio_pct", 0.0))
     volume_ratio_pct = float(load_result.get("volume_ratio_pct", 0.0))
@@ -57,6 +63,7 @@ def evaluate_risk(load_result: dict[str, object]) -> dict[str, object]:
     top_share_pct = float(load_result.get("top_share_pct", 0.0))
     axle_overload_critical = bool(load_result.get("axle_overload_critical", False))
     fragile_bottom_pressure = bool(load_result.get("fragile_bottom_pressure", False))
+    mix_group_violation = bool(load_result.get("mix_group_violation", False))
 
     category_levels = {
         "overweight_risk": _weight_level(weight_ratio_pct),
@@ -66,6 +73,7 @@ def evaluate_risk(load_result: dict[str, object]) -> dict[str, object]:
         "left_right_deviation": _deviation_level(left_right_deviation_pct),
         "top_share": _top_share_level(top_share_pct),
         "fragile_bottom_pressure": "Danger" if fragile_bottom_pressure else "Safe",
+        "mix_group_violation": "Danger" if mix_group_violation else "Safe",
     }
     final_level = _highest_level(list(category_levels.values()))
     manual = {
@@ -87,14 +95,17 @@ def evaluate_fleet_risk(fleet_load_result: dict[str, object]) -> dict[str, objec
     levels: list[str] = []
 
     for vehicle_result in fleet_load_result.get("vehicle_results", []):
-        risk = evaluate_risk(vehicle_result["load_result"])
+        assigned_pallets = vehicle_result.get("assigned_pallets", [])
+        load_result = dict(vehicle_result["load_result"])
+        load_result["mix_group_violation"] = _has_mix_group_violation(assigned_pallets)
+        risk = evaluate_risk(load_result)
         vehicle_risks.append(
             {
                 "vehicle_name": vehicle_result["vehicle"]["vehicle_name"],
                 "instance_id": vehicle_result["vehicle"].get("instance_id"),
                 "risk_result": risk,
-                "load_result": vehicle_result["load_result"],
-                "assigned_pallets": vehicle_result.get("assigned_pallets", []),
+                "load_result": load_result,
+                "assigned_pallets": assigned_pallets,
             }
         )
         levels.append(risk["final_level"])
