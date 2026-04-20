@@ -1,6 +1,35 @@
 from __future__ import annotations
 
+import math
 from typing import Iterable
+
+
+# 표준 팔레트 치수 (mm)
+_PALLET_LONG_MM = 1800.0
+_PALLET_SHORT_MM = 900.0
+
+
+def _compute_floor_grid(
+    cargo_length_mm: float,
+    cargo_width_mm: float,
+) -> tuple[int, int, float, float]:
+    """실제 적재함 치수로 바닥 팔레트 배치 그리드 계산.
+
+    Returns:
+        (cols, rows, pallet_len_mm, pallet_wid_mm)
+        — cols: 길이 방향 열 수, rows: 폭 방향 행 수
+    """
+    # 방향1: 1800mm 길이 방향
+    cols1 = max(1, int(cargo_length_mm // _PALLET_LONG_MM))
+    rows1 = max(1, int(cargo_width_mm // _PALLET_SHORT_MM))
+
+    # 방향2: 900mm 길이 방향 (회전)
+    cols2 = max(1, int(cargo_length_mm // _PALLET_SHORT_MM))
+    rows2 = max(1, int(cargo_width_mm // _PALLET_LONG_MM))
+
+    if cols2 * rows2 > cols1 * rows1:
+        return cols2, rows2, _PALLET_SHORT_MM, _PALLET_LONG_MM
+    return cols1, rows1, _PALLET_LONG_MM, _PALLET_SHORT_MM
 
 
 def _deviation_ratio_percent(first_weight: float, second_weight: float, total_weight: float) -> float:
@@ -85,22 +114,29 @@ def _plan_loading_from_pallets(selected_vehicle: dict[str, object], pallets: lis
             0 if str(pallet.get("unit_type", "pallet")) == "pallet" else 1,
         ),
     )
+
+    cargo_length_mm = float(selected_vehicle.get("cargo_length_mm", 10100.0))
+    cargo_width_mm = float(selected_vehicle.get("cargo_width_mm", 2400.0))
+    cols, rows, pallet_len, pallet_wid = _compute_floor_grid(cargo_length_mm, cargo_width_mm)
+    slots_per_layer = cols * rows
+
     placements: list[dict[str, object]] = []
 
     for index, pallet in enumerate(ordered_pallets):
-        position_cycle = [
-            ("front", "left", "bottom", 0.10),
-            ("rear", "right", "bottom", 0.90),
-            ("front", "right", "bottom", 0.30),
-            ("rear", "left", "bottom", 0.70),
-            ("front", "left", "top", 0.20),
-            ("rear", "right", "top", 0.80),
-            ("front", "right", "top", 0.35),
-            ("rear", "left", "top", 0.65),
-        ]
-        position = position_cycle[index % len(position_cycle)]
+        # 바닥(1층) 슬롯 인덱스 — slots_per_layer 초과 시 2층
+        floor_slot = index % slots_per_layer
+        col = floor_slot // rows
+        row = floor_slot % rows
 
-        longitudinal, lateral, vertical, x_ratio = position
+        # 슬롯 중심 좌표
+        x_mm = (col + 0.5) * pallet_len
+        y_mm = (row + 0.5) * pallet_wid
+        x_ratio = min(x_mm / cargo_length_mm, 1.0)
+
+        longitudinal = "front" if col < math.ceil(cols / 2) else "rear"
+        lateral = "left" if row < math.ceil(rows / 2) else "right"
+        vertical = "bottom" if index < slots_per_layer else "top"
+
         placements.append(
             {
                 **pallet,
@@ -165,6 +201,8 @@ def _plan_loading_from_pallets(selected_vehicle: dict[str, object], pallets: lis
         "axle_loads_kg": axle_loads,
         "axle_overload_critical": axle_overload_critical,
         "top_below_bottom_violation": top_below_bottom_violation,
+        "slots_per_layer": slots_per_layer,
+        "floor_grid": {"cols": cols, "rows": rows},
     }
 
 

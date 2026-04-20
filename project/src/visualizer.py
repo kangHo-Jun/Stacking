@@ -48,9 +48,14 @@ def _layout_items(vehicle: dict[str, object], load_items: Iterable[dict[str, obj
 
     visual_items: list[dict[str, object]] = []
     for index, item in enumerate(items):
-        # loader.py가 부여한 실제 layer_id(0-indexed)를 사용 (없으면 인덱스 기반 fallback)
+        # 실제 층 판별 우선순위:
+        # 1) loader.py(신버전) layer_id 있으면 사용
+        # 2) loader.py(구버전) vertical_zone("bottom"/"top") 사용
+        # 3) fallback: 인덱스 기반
         if "layer_id" in item:
             layer = int(item["layer_id"]) + 1
+        elif "vertical_zone" in item:
+            layer = 1 if str(item["vertical_zone"]) == "bottom" else 2
         else:
             layer = index // slots_per_layer + 1
         slot_index = index % slots_per_layer
