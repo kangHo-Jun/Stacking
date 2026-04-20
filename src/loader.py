@@ -294,7 +294,17 @@ def _plan_loading_from_stacks(selected_vehicle: dict[str, Any], stacks: list[dic
                     sheets_left -= s
 
             if split_items:
-                new_placements, remaining = engine.pack(split_items)
+                # 별도 엔진으로 상층만 독립 패킹 (바닥층에 끼어들지 않도록)
+                upper_engine = PackingEngine(
+                    float(selected_vehicle["cargo_width_mm"]),
+                    float(selected_vehicle["cargo_length_mm"]),
+                    avail_top_h,
+                )
+                new_placements, remaining = upper_engine.pack(split_items)
+                layer_offset = len(engine.layers)
+                for p in new_placements:
+                    p["z"] += current_max_h
+                    p["layer_id"] += layer_offset
                 placements.extend(new_placements)
                 unplaced = remaining + other_unplaced
                 upper_layer_split_applied = bool(new_placements)
