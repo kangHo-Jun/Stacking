@@ -19,24 +19,27 @@ def _sample_vehicle() -> dict[str, object]:
 
 def _sample_items() -> list[dict[str, object]]:
     return [
-        {"material_name": "중량팔레트", "material_key": "중량팔레트", "weight_kg": 1200.0, "qty": 160, "unit_type": "pallet"},
-        {"material_name": "경량팔레트", "material_key": "경량팔레트", "weight_kg": 900.0, "qty": 160, "unit_type": "pallet"},
-        {"material_name": "낱장묶음", "material_key": "낱장묶음", "weight_kg": 320.0, "qty": 24, "unit_type": "sheet"},
-        {"material_name": "낱장추가", "material_key": "낱장추가", "weight_kg": 180.0, "qty": 12, "unit_type": "sheet"},
-        {"material_name": "보조팔레트", "material_key": "보조팔레트", "weight_kg": 850.0, "qty": 160, "unit_type": "pallet"},
-        {"material_name": "후순위낱장", "material_key": "후순위낱장", "weight_kg": 90.0, "qty": 8, "unit_type": "sheet"},
-        {"material_name": "상층팔레트", "material_key": "상층팔레트", "weight_kg": 700.0, "qty": 160, "unit_type": "pallet"},
+        {"material_name": "중량팔레트", "material_key": "중량팔레트", "weight_kg": 1200.0, "qty": 160, "unit_type": "pallet", "vertical_zone": "bottom"},
+        {"material_name": "경량팔레트", "material_key": "경량팔레트", "weight_kg": 900.0, "qty": 160, "unit_type": "pallet", "vertical_zone": "bottom"},
+        {"material_name": "낱장묶음", "material_key": "낱장묶음", "weight_kg": 320.0, "qty": 24, "unit_type": "sheet", "vertical_zone": "top"},
+        {"material_name": "낱장추가", "material_key": "낱장추가", "weight_kg": 180.0, "qty": 12, "unit_type": "sheet", "vertical_zone": "top"},
+        {"material_name": "보조팔레트", "material_key": "보조팔레트", "weight_kg": 850.0, "qty": 160, "unit_type": "pallet", "vertical_zone": "bottom"},
+        {"material_name": "후순위낱장", "material_key": "후순위낱장", "weight_kg": 90.0, "qty": 8, "unit_type": "sheet", "vertical_zone": "top"},
+        {"material_name": "상층팔레트", "material_key": "상층팔레트", "weight_kg": 700.0, "qty": 160, "unit_type": "pallet", "vertical_zone": "top"},
     ]
 
 
 def test_floor_plan_svg() -> None:
-    visualization = build_vehicle_visualization(_sample_vehicle(), _sample_items())
+    # build_vehicle_visualization now expects (vehicle, load_result_dict)
+    load_result = {"placements": _sample_items(), "floor_grid": {"cols": 4, "rows": 2}}
+    visualization = build_vehicle_visualization(_sample_vehicle(), load_result)
     assert visualization["floor_plan"].startswith("<svg")
     assert "평면도" in visualization["floor_plan"]
 
 
 def test_pallet_order() -> None:
-    visualization = build_vehicle_visualization(_sample_vehicle(), _sample_items())
+    load_result = {"placements": _sample_items(), "floor_grid": {"cols": 4, "rows": 2}}
+    visualization = build_vehicle_visualization(_sample_vehicle(), load_result)
     items = visualization["items"]
 
     assert items[0]["material"] == "중량팔레트"
@@ -45,16 +48,21 @@ def test_pallet_order() -> None:
 
 
 def test_layer_assigned() -> None:
-    visualization = build_vehicle_visualization(_sample_vehicle(), _sample_items())
-    layers = {item["layer"] for item in visualization["items"]}
+    load_result = {"placements": _sample_items(), "floor_grid": {"cols": 4, "rows": 2}}
+    visualization = build_vehicle_visualization(_sample_vehicle(), load_result)
+    items = visualization["items"]
+    # Ensure items have 'layer' key (pre-processed by build_vehicle_visualization)
+    layers = {item["layer"] for item in items}
 
     assert 1 in layers
     assert 2 in layers
 
 
 def test_unit_type() -> None:
-    visualization = build_vehicle_visualization(_sample_vehicle(), _sample_items())
-    units = {item["unit"] for item in visualization["items"]}
+    load_result = {"placements": _sample_items(), "floor_grid": {"cols": 4, "rows": 2}}
+    visualization = build_vehicle_visualization(_sample_vehicle(), load_result)
+    items = visualization["items"]
+    units = {item["unit"] for item in items}
 
     assert units == {"pallet", "sheet"}
 
@@ -84,5 +92,8 @@ def test_full_regression(
     assert visualizations
     assert response.status_code == 200
     assert payload is not None
+    # '시각화SVG' is still kept for backward compatibility test
     assert "시각화SVG" in payload
+    # New JSON keys for Canvas engine
+    assert "packed_items" in payload
     assert "팔레트목록" in payload

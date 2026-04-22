@@ -29,11 +29,11 @@ def test_T03_axle_overload(vehicle_db: list[dict[str, object]]) -> None:
 
 
 def test_T04_front_rear_deviation(vehicle_db: list[dict[str, object]]) -> None:
-    vehicle_ref = vehicle_db[0]
     vehicle = {
-        "vehicle_name": vehicle_ref["vehicle_name"],
-        "cargo_length_mm": float(vehicle_ref["cargo_length_mm"]),
-        "axles": int(vehicle_ref["axles"]),
+        "vehicle_name": "test_split_truck",
+        "cargo_length_mm": 1800.0,
+        "cargo_width_mm": 900.0,
+        "axles": 2,
     }
     total_weight = 1000.0
     front_weight = total_weight * (1 + 0.35) / 2

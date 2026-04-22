@@ -10,7 +10,7 @@ import pytest
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-SRC_DIR = ROOT_DIR / "src"
+SRC_DIR = ROOT_DIR / "project" / "src"
 
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -24,7 +24,7 @@ from vehicle_selector import select_optimal_vehicle
 
 MATERIAL_PATH = ROOT_DIR / "data" / "자재정보.csv"
 VEHICLE_PATH = ROOT_DIR / "data" / "차량정보.csv"
-MAIN_PATH = ROOT_DIR / "src" / "main.py"
+MAIN_PATH = ROOT_DIR / "project" / "src" / "main.py"
 OUTPUT_DIR = ROOT_DIR / "output"
 
 

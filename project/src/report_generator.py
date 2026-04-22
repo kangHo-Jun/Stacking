@@ -11,7 +11,9 @@ RISK_LABELS = {
     "front_rear_deviation": "전후편차",
     "left_right_deviation": "좌우편차",
     "top_share": "상단비중",
-    "loading_position": "적재위치",
+    "fragile_bottom_pressure": "취약자재",
+    "mix_group_violation": "혼적위반",
+    "stack_limit_exceeded": "적재제한",
 }
 
 
@@ -38,6 +40,7 @@ def _build_report_payload(
             "상단비중": float(load_result["top_share_pct"]),
         },
         "축중초과": bool(load_result["axle_overload_critical"]),
+        "혼적위반": bool(load_result.get("mix_group_violation", False)),
         "항목별위험도": {
             RISK_LABELS[key]: value
             for key, value in category_levels.items()
@@ -115,8 +118,8 @@ def generate_fleet_report(
     vehicle_sections = []
     for vehicle_risk in fleet_risk_result.get("vehicle_risks", []):
         load_result = vehicle_risk["load_result"]
-        risk_result = vehicle_risk["risk_result"]
-        vehicle_name = vehicle_risk["vehicle_name"]
+        risk = vehicle_risk["risk"]
+        vehicle_name = vehicle_risk.get("vehicle", {}).get("vehicle_name", "Unknown")
         pallets = vehicle_risk.get("assigned_pallets", [])
         vehicle_sections.append(
             {
@@ -124,8 +127,8 @@ def generate_fleet_report(
                 "인스턴스": vehicle_risk.get("instance_id"),
                 "총중량": float(load_result["total_weight_kg"]),
                 "팔레트수": len(pallets),
-                "위험도": risk_result["final_level"],
-                "현장매뉴얼": risk_result["manual"],
+                "위험도": risk["final_level"],
+                "현장매뉴얼": risk["manual"],
                 "편차": {
                     "전후": float(load_result["front_rear_deviation_pct"]),
                     "좌우": float(load_result["left_right_deviation_pct"]),
@@ -134,7 +137,7 @@ def generate_fleet_report(
                 "축중초과": bool(load_result["axle_overload_critical"]),
                 "항목별위험도": {
                     RISK_LABELS[key]: value
-                    for key, value in risk_result["category_levels"].items()
+                    for key, value in risk["category_levels"].items()
                 },
                 "팔레트순서": [
                     pallet["material_key"]
