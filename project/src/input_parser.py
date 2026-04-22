@@ -38,7 +38,6 @@ _COL_ALIASES: dict[str, list[str]] = {
     "취급등급": ["취급등급", "등급", "grade"],
     "방향고정": ["방향고정", "고정", "fixed"],
     "적재위치": ["적재위치", "위치", "position"],
-    "혼적그룹": ["혼적그룹", "혼적불가그룹", "mix_group", "group"],
 }
 
 
@@ -142,7 +141,6 @@ def load_material_db(csv_path: str | Path) -> dict[str, dict[str, object]]:
             "취급등급": _get_col(row, "취급등급", "B"),
             "방향고정": _get_col(row, "방향고정", "N"),
             "적재위치": _get_col(row, "적재위치", "하단"),
-            "혼적불가그룹": _get_col(row, "혼적그룹", ""),
         }
 
     return material_db
@@ -189,8 +187,6 @@ def process_orders(
                 "total_volume_m3": item_volume_m3,
                 "handling_grade": str(material["취급등급"]),
                 "preferred_position": str(material["적재위치"]),
-                "direction_locked": str(material["방향고정"]),
-                "mix_group": str(material.get("혼적불가그룹", "")),
             }
         )
 

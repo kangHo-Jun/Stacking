@@ -25,8 +25,6 @@ def _build_pallets(order_items: Iterable[dict[str, object]]) -> list[dict[str, o
                         "unit_type": "pallet",
                         "material_name": item.get("material_name", item.get("material_key", "")),
                         "sequence": pallet_index,
-                        "direction_locked": item.get("direction_locked", "N"),
-                        "mix_group": item.get("mix_group", ""),
                     }
                 )
             continue
@@ -50,8 +48,6 @@ def _build_pallets(order_items: Iterable[dict[str, object]]) -> list[dict[str, o
                     "unit_type": "pallet",
                     "material_name": item.get("material_name", item.get("material_key", "")),
                     "sequence": pallet_index,
-                    "direction_locked": item.get("direction_locked", "N"),
-                    "mix_group": item.get("mix_group", ""),
                 }
             )
         if remainder:
@@ -66,8 +62,6 @@ def _build_pallets(order_items: Iterable[dict[str, object]]) -> list[dict[str, o
                     "unit_type": "sheet",
                     "material_name": item.get("material_name", item.get("material_key", "")),
                     "sequence": full_pallets,
-                    "direction_locked": item.get("direction_locked", "N"),
-                    "mix_group": item.get("mix_group", ""),
                 }
             )
     return pallets

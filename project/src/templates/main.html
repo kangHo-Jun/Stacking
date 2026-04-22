@@ -32,16 +32,6 @@
       --header-height: 48px;
       --panel-left-width: 280px;
       --panel-right-width: 260px;
-      /* New Visualizer Colors */
-      --viz-bg: #0d1b2a;
-      --viz-grid: rgba(30, 58, 95, 0.4);
-      --viz-l1: #c0392b;
-      --viz-l2: #e74c3c;
-      --viz-sheet: #e67e22;
-      --viz-select: #fbbf24;
-      --viz-safe: #22c55e;
-      --viz-caution: #f59e0b;
-      --viz-danger: #ef4444;
     }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -55,10 +45,9 @@
         var(--background);
     }
     .app-shell {
-      height: 100vh;
+      min-height: 100vh;
       display: grid;
       grid-template-rows: var(--header-height) 1fr;
-      overflow: hidden;
     }
     .header {
       position: sticky;
@@ -112,7 +101,6 @@
       gap: 16px;
       padding: 16px;
       min-height: 0;
-      overflow: auto;
     }
     .panel {
       min-height: 0;
@@ -124,7 +112,7 @@
       overflow: hidden;
     }
     .panel-scroll {
-      height: 100%;
+      height: calc(100vh - var(--header-height) - 32px);
       overflow: auto;
       padding: 22px;
     }
@@ -192,42 +180,17 @@
     }
     .btn:hover { transform: translateY(-1px); }
     .btn-cta {
-      flex: 1;
+      width: 100%;
       border: none;
       color: white;
       background: var(--gradient-cta);
       box-shadow: var(--shadow-glow);
       font-weight: 700;
       padding: 15px 16px;
+      margin-top: 18px;
     }
     .btn-secondary {
       background: linear-gradient(180deg, #ffffff, #f6faf6);
-    }
-      gap: 8px;
-    }
-    .diagram-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    .diagram-box {
-      background: #f1f5f9;
-      border-radius: 12px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-    .diagram-box span {
-      font-size: 10px;
-      color: #64748b;
-      font-weight: 600;
-    }
-    .diagram-box svg {
-      width: 100%;
-      height: auto;
-      max-height: 200px;
     }
     .order-list, .result-list, .risk-list, .sequence-list {
       display: grid;
@@ -340,11 +303,10 @@
       margin: 16px 0;
     }
     .center-panel {
-      display: flex !important;
-      flex-direction: column !important;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 14px;
       min-width: 0;
-      overflow-y: auto !important; /* Force scrolling if content overflows */
-      flex: 1;
     }
     .canvas-header {
       padding: 16px 18px 0;
@@ -377,139 +339,56 @@
       box-shadow: 0 10px 20px rgba(18, 54, 40, 0.1);
       font-weight: 700;
     }
-    
-    /* Updated Vehicle Tabs Style */
-    .vehicle-selector-bar {
-      display: flex;
-      gap: 10px;
-      padding: 14px 20px;
-      background: white;
-      border-bottom: 1px solid var(--line);
-      overflow-x: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-      flex-shrink: 0;
-      z-index: 100;
-    }
-    .vehicle-selector-bar::-webkit-scrollbar { display: none; }
-    .v-tab {
-      padding: 10px 20px;
-      background: #f1f5f9;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .v-tab:hover { background: #e2e8f0; color: var(--primary-dark); }
-    .v-tab.active {
-      background: var(--primary-dark);
-      color: #fff;
-      border-color: var(--primary-dark);
-      box-shadow: 0 4px 12px rgba(18, 54, 40, 0.2);
-    }
     .canvas-area {
-      padding: 0;
-      overflow: hidden;
-      position: relative;
-      background: var(--viz-bg);
-      flex: 1;
+      padding: 0 18px 18px;
+      overflow: auto;
+    }
+    .canvas-stack {
+      display: grid;
+      gap: 16px;
+    }
+    .viz-card header {
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 16px 18px 0;
     }
-    .viz-container {
-      position: relative;
-      width: 100%;
-      flex: 1;
-      cursor: crosshair;
+    .viz-card .content {
+      padding: 14px 18px 18px;
     }
-    .viz-canvas {
+    .viz-main {
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f8fbff);
+      padding: 14px;
+    }
+    .viz-main svg {
       width: 100%;
-      height: 100%;
+      height: auto;
       display: block;
     }
-    /* Floating Control Buttons */
-    .viz-controls {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      z-index: 50;
-    }
-    .viz-btn-group {
-      display: flex;
-      flex-direction: column;
-      background: rgba(22, 33, 62, 0.85);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-    }
-    .viz-btn {
-      width: 52px;
-      height: 52px;
-      border: 0;
-      background: transparent;
-      color: rgba(255,255,255,0.6);
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      transition: all 0.2s;
-    }
-    .viz-btn .icon { font-size: 16px; margin-bottom: 2px; }
-    .viz-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-    .viz-btn.active { background: var(--primary); color: #fff; }
-    
-    /* Layer Filter Badge on Button */
-    .layer-badge { font-size: 9px; opacity: 0.8; }
-
-    /* Bottom Info Bar */
-    .viz-footer {
-      background: rgba(13, 27, 42, 0.95);
-      border-top: 1px solid rgba(255,255,255,0.1);
-      padding: 12px 20px;
-      display: grid;
-      grid-template-columns: 1.2fr 1fr 1fr 1fr;
-      gap: 20px;
-      font-size: 12px;
-      color: #fff;
-      backdrop-filter: blur(10px);
-    }
-    .viz-footer-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .viz-footer-label { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; }
-    .viz-footer-val { font-weight: 700; font-size: 13px; }
-    
-    /* Tooltip */
-    .viz-tooltip {
-      position: fixed;
-      pointer-events: none;
-      background: #1e293b;
-      color: #fff;
+    .svg-card {
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f7faf8);
       padding: 10px;
-      border-radius: 8px;
-      font-size: 11px;
-      z-index: 1000;
-      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
-      display: none;
-      min-width: 140px;
-      border: 1px solid rgba(255,255,255,0.1);
     }
-    .viz-tooltip strong { display: block; margin-bottom: 4px; font-size: 12px; color: var(--primary); }
+    .svg-card svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .three-shell {
+      display: none;
+      border-radius: 24px;
+      overflow: hidden;
+      background: #1a1a2e;
+      min-height: 520px;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .three-shell.active { display: block; }
+    .three-canvas { width: 100%; height: 520px; }
     .badge {
       display: inline-flex;
       align-items: center;
@@ -588,10 +467,10 @@
         height: auto;
         max-height: none;
       }
-      .left-panel, .right-panel, .center-panel {
+      .left-panel, .right-panel, .center-card {
         display: none;
       }
-      .left-panel.mobile-active, .right-panel.mobile-active, .center-panel.mobile-active {
+      .left-panel.mobile-active, .right-panel.mobile-active, .center-card.mobile-active {
         display: block;
       }
       .mobile-nav { display: inline-flex; }
@@ -648,75 +527,28 @@
           </div>
 
           <div class="panel-divider"></div>
-          <div class="button-row">
-            <button class="btn btn-cta" type="button" id="runButton">최적 배차 실행</button>
-            <button class="btn btn-secondary" type="button" id="resetButton" style="width:100px; font-weight:600;">초기화</button>
-          </div>
+          <button class="btn btn-cta" type="button" id="runButton">최적 배차 실행</button>
         </div>
       </aside>
 
-      <section class="panel center-panel mobile-active" data-mobile-panel="visual">
-        <!-- 상단 차량 선택 탭 (이전 위치: 캔버스 내부 -> 현재 위치: 패널 최상단 제어 바) -->
-        <div id="vehicleTabs" class="vehicle-selector-bar" style="display:none;"></div>
-
-        <!-- 외부 래퍼: flex:1 → 패널 전체 높이 채움 -->
-        <div style="flex:1;min-height:420px;position:relative">
-          <!-- 캔버스+인포바 내부 -->
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#0d1b2a;border-bottom-left-radius:10px;border-bottom-right-radius:10px;overflow:visible">
-            <div id="viz-label" style="position:absolute;left:15px;top:15px;background:rgba(0,0,0,0.6);color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;z-index:20;pointer-events:none">ISO View</div>
-
-            <canvas id="viz-canvas" style="flex:1;width:100%;display:block;cursor:grab;background:#0d1b2a;border-radius:10px 10px 0 0"></canvas>
-
-            <div id="viz-tip" style="display:none;position:absolute;background:rgba(26,32,44,0.95);color:#fff;padding:8px 12px;border-radius:8px;font-size:11px;z-index:999;pointer-events:none;border:1px solid rgba(255,255,255,0.2);box-shadow:0 10px 20px rgba(0,0,0,0.5)"></div>
-
-            <div id="vizEmpty" class="empty-state" style="position:absolute;inset:0;z-index:10;background:rgba(13,27,42,0.85);backdrop-filter:blur(8px);display:grid;place-items:center;color:#fff;text-align:center">
-              자재를 입력하고 `최적 배차 실행`을 누르면<br>통합 시각화 엔진이 구동됩니다.
+      <section class="panel center-card mobile-active" data-mobile-panel="visual">
+        <div class="canvas-header">
+          <div><h2 class="section-title">적재 시각화</h2></div>
+          <div class="view-tabs">
+            <button class="active" data-view="2d" type="button">2.5D 보기</button>
+            <button data-view="3d" type="button">3D 보기</button>
+          </div>
+        </div>
+        <div class="canvas-area">
+          <div class="canvas-stack" id="twoDStack">
+            <div class="empty-state" id="visualEmpty">
+              자재를 입력하고 `최적 배차 실행`을 누르면<br>평면도, 측면도, 중량분포, 3D 적재 모델이 여기에 표시됩니다.
             </div>
-
-            <div id="info-bar" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;background:#0a1628;border-top:1px solid #1e3a5f;padding:8px 12px;flex-shrink:0">
-              <div style="padding:0 4px">
-                <div style="font-size:9px;color:#475569">선택 팔레트</div>
-                <div id="viz-sel-info" style="font-size:12px;font-weight:500;color:#e2e8f0">—</div>
-              </div>
-
-              <div style="padding:0 4px;text-align:center;border-left:1px solid #1e3a5f">
-                <div style="font-size:9px;color:#475569">적재율</div>
-                <div id="viz-util" style="font-size:14px;font-weight:500;color:#3b82f6">—</div>
-              </div>
-
-              <div style="padding:0 4px;text-align:center;border-left:1px solid #1e3a5f">
-                <div style="font-size:9px;color:#475569">COG (종/횡)</div>
-                <div id="viz-cog" style="font-size:14px;font-weight:500;color:#22c55e">—</div>
-              </div>
-
-              <div style="padding:0 4px;text-align:center;border-left:1px solid #1e3a5f">
-                <div style="font-size:9px;color:#475569">위험 건수</div>
-                <div id="viz-risk-count" style="font-size:14px;font-weight:500;color:#f59e0b">—</div>
-              </div>
-            </div>
-          </div><!-- /내부 clip div -->
-
-          <!-- 우측 플로팅 버튼: 외부 래퍼 기준 absolute → overflow:hidden에 잘리지 않음 -->
-          <div style="position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:30">
-            <div class="viz-btn-group" style="display:flex;flex-direction:column;background:rgba(22,33,62,0.85);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,0.4)">
-              <button class="viz-btn active" data-action="view" data-val="iso" style="padding:10px;border:0;background:transparent;color:#fff;font-size:10px;font-weight:700;cursor:pointer">ISO</button>
-              <button class="viz-btn" data-action="view" data-val="top" style="padding:10px;border:0;background:transparent;color:rgba(255,255,255,0.6);font-size:10px;font-weight:700;cursor:pointer">TOP</button>
-              <button class="viz-btn" data-action="view" data-val="side" style="padding:10px;border:0;background:transparent;color:rgba(255,255,255,0.6);font-size:10px;font-weight:700;cursor:pointer">SIDE</button>
-            </div>
-            <div style="height:1px;background:rgba(255,255,255,0.2);margin:2px 0"></div>
-            <div class="viz-btn-group" style="display:flex;flex-direction:column;background:rgba(22,33,62,0.85);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,0.4)">
-              <button class="viz-btn" data-action="toggle" data-val="risk" style="padding:10px;border:0;background:transparent;color:rgba(255,255,255,0.6);font-size:10px;font-weight:700;cursor:pointer">위험도⚠️</button>
-              <button class="viz-btn" data-action="toggle" data-val="weight" style="padding:10px;border:0;background:transparent;color:rgba(255,255,255,0.6);font-size:10px;font-weight:700;cursor:pointer">중량분포</button>
-            </div>
-            <div style="height:1px;background:rgba(255,255,255,0.2);margin:2px 0"></div>
-            <div class="viz-btn-group" style="display:flex;flex-direction:column;background:rgba(22,33,62,0.85);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,0.4)">
-              <button class="viz-btn active" data-action="filter" data-val="all" style="padding:10px;border:0;background:transparent;color:#fff;font-size:10px;font-weight:700;cursor:pointer">전체</button>
-              <button class="viz-btn" data-action="filter" data-val="1" style="padding:10px;border:0;background:transparent;color:rgba(255,255,255,0.6);font-size:10px;font-weight:700;cursor:pointer">1층</button>
-              <button class="viz-btn" data-action="filter" data-val="2" style="padding:10px;border:0;background:transparent;color:rgba(255,255,255,0.6);font-size:10px;font-weight:700;cursor:pointer">2층</button>
-            </div>
-          </div><!-- /버튼 컬럼 -->
-
-        </div><!-- /외부 래퍼 -->
+          </div>
+          <div class="three-shell" id="threeShell">
+            <div class="three-canvas" id="threeCanvas"></div>
+          </div>
+        </div>
       </section>
 
       <aside class="panel right-panel mobile-active" data-mobile-panel="result">
@@ -763,423 +595,15 @@
     <div class="toast" id="toast"></div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script>
     const state = {
       orders: [],
       materialOptions: {{ material_options | tojson }},
       lastResult: null,
-      engine: null
-    };
-
-    const VisualizerEngine = {
-      canvas: null,
-      ctx: null,
-      items: [],
-      vehicle: { cols: 6, rows: 2, length: 1, width: 1 },
-      summary: {},
-      view: 'iso',
-      showRisk: false,
-      showWeight: false,
-      layerFilter: 'all',
-      yaw: Math.PI / 6,
-      hoveredId: null,
-      selectedId: null,
-      isDragging: false,
-      lastMouseX: 0,
-      hitBoxes: [],
-
-      init(data = null) {
-        this.canvas = document.getElementById('viz-canvas');
-        this.ctx = this.canvas.getContext('2d');
-        
-        window.addEventListener('resize', () => this.resize());
-        this.resize();
-        
-        this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
-        window.addEventListener('mousemove', (e) => this.onMouseMove(e));
-        window.addEventListener('mouseup', () => this.onMouseUp());
-        this.canvas.addEventListener('mouseleave', () => {
-          this.hoveredId = null;
-          document.getElementById('viz-tip').style.display = 'none';
-        });
-        
-        if (data) this.setData(data);
-        this.animate();
-      },
-
-      resize() {
-        if (!this.canvas) return;
-        const w = this.canvas.clientWidth;
-        const h = this.canvas.clientHeight;
-        if (!w || !h) return;
-        this.width = w;
-        this.height = h;
-        this.canvas.width = w * window.devicePixelRatio;
-        this.canvas.height = h * window.devicePixelRatio;
-        this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-      },
-
-      setData(data) {
-        this.items = data.packed_items || [];
-        this.vehicle = data.vehicle || { cols: 6, rows: 2 };
-        this.summary = data.summary || {};
-        this.selectedId = null;
-        this.updateFooter();
-        const emptyEl = document.getElementById('vizEmpty');
-        if (emptyEl) emptyEl.style.display = 'none';
-      },
-
-      onMouseDown(e) {
-        if (this.view === 'iso') {
-          this.isDragging = true;
-          this.lastMouseX = e.clientX;
-        }
-        if (this.hoveredId !== null) {
-          this.selectedId = this.hoveredId;
-          this.updateFooter();
-        }
-      },
-
-      onMouseMove(e) {
-        if (!this.canvas) return;
-        const rect = this.canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
-        
-        if (this.isDragging) {
-          const deltaX = e.clientX - this.lastMouseX;
-          this.yaw += deltaX * 0.005;
-          const minYaw = 0.17; // ~10 deg
-          const maxYaw = 0.78; // ~45 deg
-          if (this.yaw < minYaw) this.yaw = minYaw;
-          if (this.yaw > maxYaw) this.yaw = maxYaw;
-          this.lastMouseX = e.clientX;
-        }
-        
-        this.checkHover(mx, my);
-        this.updateTooltip(e.clientX, e.clientY);
-      },
-
-      onMouseUp() { this.isDragging = false; },
-
-      checkHover(mx, my) {
-        this.hoveredId = null;
-        for (let i = this.hitBoxes.length - 1; i >= 0; i--) {
-          const hb = this.hitBoxes[i];
-          if (mx >= hb.x && mx <= hb.x + hb.w && my >= hb.y && my <= hb.y + hb.h) {
-            this.hoveredId = hb.id;
-            break;
-          }
-        }
-      },
-
-      updateTooltip(x, y) {
-        const tooltip = document.getElementById('viz-tip');
-        if (!tooltip) return;
-        if (this.hoveredId === null) {
-          tooltip.style.display = 'none';
-          return;
-        }
-        const item = this.items.find(i => i.id === this.hoveredId);
-        if (!item) return;
-
-        let badges = '';
-        if (item.is_rear_entry) {
-            badges += '<div style="margin-top:8px;padding:4px 8px;background:#f59e0b;color:#000;border-radius:4px;font-weight:700;font-size:10px;display:inline-block">⚠️ 후면 진입 적재</div>';
-        }
-
-        tooltip.style.display = 'block';
-        tooltip.style.left = (x + 15) + 'px';
-        tooltip.style.top = (y + 15) + 'px';
-        tooltip.innerHTML = `
-            No. ${item.id} (${item.layer}층)<br>
-            수량: ${item.qty} ${item.unit}<br>
-            무게: ${item.weight.toLocaleString()}kg<br>
-            상태: <span style="color:${item.risk_level === 0 ? '#22c55e' : '#ef4444'}">${item.risk_level === 0 ? 'Safe' : 'Caution'}</span>
-          </div>
-        `;
-      },
-
-      updateFooter() {
-        const sel = this.items.find(i => i.id === this.selectedId);
-        const lSel = document.getElementById('viz-sel-info');
-        const lUtil = document.getElementById('viz-util');
-        const lCog = document.getElementById('viz-cog');
-        const lRisk = document.getElementById('viz-risk-count');
-
-        if (lSel) lSel.textContent = sel ? `${sel.layer}층 / No.${sel.id} / ${sel.qty}장` : '—';
-        if (lUtil) {
-          lUtil.textContent = this.summary.utilization !== undefined ? `${this.summary.utilization.toFixed(1)}%` : '—';
-        }
-        if (lCog) {
-          const hasCog = this.summary.cog_fr !== undefined && this.summary.cog_lr !== undefined;
-          lCog.textContent = hasCog ? `${this.summary.cog_fr.toFixed(1)}% / ${this.summary.cog_lr.toFixed(1)}%` : '—';
-        }
-        if (lRisk) lRisk.textContent = `${this.summary.risk_count || 0}건`;
-      },
-
-      animate() {
-        this.draw();
-        requestAnimationFrame(() => this.animate());
-      },
-
-      getColor(item) {
-        if (item.id === this.selectedId || item.id === this.hoveredId) return '#fbbf24';
-        if (this.showWeight) {
-          const ratio = Math.min(item.weight / 2500, 1);
-          return this.interpolateColor('#dbeafe', '#1e3a8a', ratio);
-        }
-        if (this.layerFilter !== 'all' && item.layer != this.layerFilter) return '#334155';
-        
-        if (item.unit === 'sheet') return '#e67e22';
-        return item.layer === 1 ? '#c0392b' : '#e74c3c';
-      },
-
-      interpolateColor(c1, c2, r) {
-        const h2d = (h) => parseInt(h.slice(1), 16);
-        const d2h = (d) => d.toString(16).padStart(2, '0');
-        const v1 = h2d(c1), v2 = h2d(c2);
-        const r1 = (v1 >> 16), g1 = (v1 >> 8) & 0xff, b1 = v1 & 0xff;
-        const r2 = (v2 >> 16), g2 = (v2 >> 8) & 0xff, b2 = v2 & 0xff;
-        return `#${d2h(Math.round(r1 + (r2-r1)*r))}${d2h(Math.round(g1 + (g2-g1)*r))}${d2h(Math.round(b1 + (b2-b1)*r))}`;
-      },
-
-      adjustColor(hex, amt) {
-        const v = parseInt(hex.slice(1), 16);
-        let r = (v >> 16) + amt, g = ((v >> 8) & 0xff) + amt, b = (v & 0xff) + amt;
-        r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b));
-        return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
-      },
-
-      draw() {
-        if (!this.ctx) return;
-        const ctx = this.ctx;
-        ctx.clearRect(0, 0, this.width, this.height);
-        this.hitBoxes = [];
-        if (!this.items.length) return;
-
-        if (this.view === 'iso') this.drawISO();
-        else if (this.view === 'top') this.drawTOP();
-        else if (this.view === 'side') this.drawSIDE();
-      },
-
-      drawISO() {
-        const ctx = this.ctx;
-        const s = 60, h = 40;
-        
-        // Calculate bounds for centering
-        const yawCos = Math.cos(this.yaw);
-        const yawSin = Math.sin(this.yaw);
-        
-        const minX = -this.vehicle.rows * s * yawCos;
-        const maxX = this.vehicle.cols * s * yawCos;
-        const minY = 0;
-        const maxY = (this.vehicle.cols + this.vehicle.rows) * s * yawSin;
-        
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-        
-        // Final screen center position
-        const cx = this.width / 2 - centerX;
-        const cy = this.height * 0.6 - centerY; 
-        
-        const sorted = [...this.items].sort((a, b) => (a.col + a.row) - (b.col + b.row));
-        ctx.save();
-        ctx.translate(cx, cy);
-        
-        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-        ctx.setLineDash([5, 5]);
-        for (let c = 0; c <= this.vehicle.cols; c++) {
-          const p1 = this.isoProj(c, 0, s);
-          const p2 = this.isoProj(c, this.vehicle.rows, s);
-          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-        }
-        for (let r = 0; r <= this.vehicle.rows; r++) {
-          const p1 = this.isoProj(0, r, s);
-          const p2 = this.isoProj(this.vehicle.cols, r, s);
-          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-        }
-        ctx.setLineDash([]);
-
-        sorted.forEach(item => {
-          const isFm = this.layerFilter === 'all' || item.layer == this.layerFilter;
-          ctx.globalAlpha = isFm ? 1 : 0.1;
-          const pos = this.isoProj(item.col, item.row, s);
-          this.drawBox(pos.x, pos.y, s, h, item, cx, cy);
-        });
-        
-        if (this.summary.cog_fr !== undefined) {
-          const cogP = this.isoProj(this.vehicle.cols/2, this.vehicle.rows/2, s);
-          ctx.fillStyle = '#ef4444';
-          ctx.beginPath(); ctx.arc(cogP.x, cogP.y, 5, 0, Math.PI*2); ctx.fill();
-        }
-        ctx.restore();
-        ctx.globalAlpha = 1;
-      },
-
-      isoProj(c, r, s) {
-        const x = (c - r) * s * Math.cos(this.yaw);
-        const y = (c + r) * s * Math.sin(this.yaw);
-        return { x, y };
-      },
-
-      drawBox(x, y, s, h, item, cx, cy) {
-        const ctx = this.ctx;
-        const bh = item.unit === 'sheet' ? h / 4 : h;
-        const by = y - (item.layer - 1) * h;
-        const color = this.getColor(item);
-        const sw = s * Math.cos(this.yaw), sh = s * Math.sin(this.yaw);
-
-        ctx.fillStyle = this.adjustColor(color, 20);
-        ctx.beginPath();
-        ctx.moveTo(x, by - bh);
-        ctx.lineTo(x + sw, by - bh + sh);
-        ctx.lineTo(x, by - bh + sh * 2);
-        ctx.lineTo(x - sw, by - bh + sh);
-        ctx.fill();
-        
-        ctx.fillStyle = this.adjustColor(color, -10);
-        ctx.beginPath();
-        ctx.moveTo(x, by - bh + sh * 2);
-        ctx.lineTo(x + sw, by - bh + sh);
-        ctx.lineTo(x + sw, by + sh);
-        ctx.lineTo(x, by + sh * 2);
-        ctx.fill();
-
-        ctx.fillStyle = this.adjustColor(color, -30);
-        ctx.beginPath();
-        ctx.moveTo(x, by - bh + sh * 2);
-        ctx.lineTo(x - sw, by - bh + sh);
-        ctx.lineTo(x - sw, by + sh);
-        ctx.lineTo(x, by + sh * 2);
-        ctx.fill();
-
-        if (item.unit === 'sheet') {
-          ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.setLineDash([2,2]);
-          ctx.beginPath(); ctx.moveTo(x-sw, by+sh); ctx.lineTo(x, by+sh*2); ctx.lineTo(x+sw, by+sh); ctx.stroke();
-          ctx.setLineDash([]);
-        }
-        
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(item.id, x, by + sh - bh/2 + 4);
-
-        this.hitBoxes.push({ id: item.id, x: x - sw + cx, y: by - bh + cy, w: sw*2, h: bh + sh*2 });
-      },
-
-      drawTOP() {
-        const ctx = this.ctx;
-        const pad = Math.min(36, this.height * 0.08);
-        const cw = (this.width - pad * 2) / this.vehicle.cols;
-        const ch = (this.height - pad * 2) / Math.max(1, this.vehicle.rows);
-        const cy = pad;
-
-        ctx.strokeStyle = '#334155'; ctx.setLineDash([8, 4]);
-        ctx.strokeRect(pad, cy, cw * this.vehicle.cols, ch * this.vehicle.rows);
-        ctx.setLineDash([]);
-
-        this.items.forEach(item => {
-          if (this.layerFilter !== 'all' && item.layer != this.layerFilter) return;
-          if (this.layerFilter === 'all' && item.layer > 1) return;
-
-          let x, y, bw, bh;
-          
-          if (item.is_rear_entry) {
-            // 후면 진입은 폭방향(Lateral) 배치: x_mm이 길이방향, y_mm이 폭방향 중앙
-            const scaleX = (this.width - pad * 2) / this.vehicle.cargo_length_mm;
-            const scaleY = (this.height - pad * 2) / this.vehicle.cargo_width_mm;
-            
-            x = pad + (item.x_mm - 450) * scaleX; // 단변(900)의 절반
-            y = cy + (this.vehicle.cargo_width_mm - item.y_mm - 900) * scaleY; // 장변(1800)의 절반
-            bw = 900 * scaleX;
-            bh = 1800 * scaleY;
-          } else {
-            x = pad + item.col * cw;
-            y = cy + (this.vehicle.rows - 1 - item.row) * ch;
-            bw = cw;
-            bh = ch;
-          }
-
-          const color = this.getColor(item);
-          ctx.fillStyle = color;
-          this.roundRect(ctx, x + 5, y + 5, bw - 10, bh - 10, 8); ctx.fill();
-
-          // 후면 진입 특수 테두리 (주황색 점선)
-          if (item.is_rear_entry) {
-            ctx.strokeStyle = '#f59e0b'; ctx.setLineDash([4, 2]); ctx.lineWidth = 2;
-            this.roundRect(ctx, x + 5, y + 5, bw - 10, bh - 10, 8); ctx.stroke();
-            ctx.setLineDash([]); ctx.lineWidth = 1;
-          }
-
-          if (item.unit === 'sheet') {
-            ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.setLineDash([4, 4]);
-            this.roundRect(ctx, x + 5, y + 5, cw - 10, ch - 10, 8); ctx.stroke();
-            ctx.setLineDash([]);
-          }
-
-          ctx.fillStyle = '#fff'; 
-          ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(item.id, x + 12, y + 42);
-          ctx.font = '9px sans-serif'; ctx.textAlign = 'right'; ctx.fillText(`${item.qty}장`, x + cw - 12, y + 42);
-          
-          ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x + 12, y + ch - 18, cw - 24, 3);
-          ctx.fillStyle = '#fff'; ctx.fillRect(x + 12, y + ch - 18, (item.weight / 2500) * (cw - 24), 3);
-
-          this.hitBoxes.push({ id: item.id, x, y, w: cw, h: ch });
-        });
-      },
-
-      drawSIDE() {
-        const ctx = this.ctx;
-        const pad = 60, cw = (this.width - pad*2) / this.vehicle.cols, ch = 90, floorY = this.height - 100;
-
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.setLineDash([5, 5]);
-        ctx.beginPath(); ctx.moveTo(pad, floorY - ch); ctx.lineTo(this.width - pad, floorY - ch); ctx.stroke();
-        ctx.setLineDash([]);
-        
-        [...this.items].sort((a,b) => a.layer - b.layer).forEach(item => {
-          if (this.layerFilter !== 'all' && item.layer != this.layerFilter) return;
-
-          let x, y, bw;
-          if (item.is_rear_entry) {
-            const scaleX = (this.width - pad * 2) / this.vehicle.cargo_length_mm;
-            x = pad + (item.x_mm - 450) * scaleX;
-            bw = 900 * scaleX;
-          } else {
-            x = pad + item.col * cw;
-            bw = cw;
-          }
-
-          const vh = item.unit === 'sheet' ? ch * 0.3 : ch * 0.8;
-          const y_pos = floorY - item.layer * ch + (ch - vh);
-          const color = this.getColor(item);
-          
-          ctx.fillStyle = color;
-          this.roundRect(ctx, x + 8, y_pos, bw - 16, vh, 6); ctx.fill();
-          
-          // 후면 진입 특수 테두리 (SIDE)
-          if (item.is_rear_entry) {
-            ctx.strokeStyle = '#f59e0b'; ctx.setLineDash([4, 2]); ctx.lineWidth = 2;
-            this.roundRect(ctx, x + 8, y_pos, bw - 16, vh, 6); ctx.stroke();
-            ctx.setLineDash([]); ctx.lineWidth = 1;
-          }
-
-          if (item.unit === 'sheet') {
-            ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.setLineDash([4,4]);
-            this.roundRect(ctx, x + 8, y_pos, bw - 16, vh, 6); ctx.stroke();
-            ctx.setLineDash([]);
-          }
-
-          ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-          ctx.fillText(item.id, x + bw/2, y_pos + vh/2 + 4);
-          this.hitBoxes.push({ id: item.id, x, y: y_pos, w: bw, h: vh });
-        });
-      },
-
-      roundRect(ctx, x, y, w, h, r) {
-        ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-        ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-        ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
-      }
+      threeReady: false,
+      threeContext: null,
     };
 
     const elements = {
@@ -1188,8 +612,11 @@
       addOrderButton: document.getElementById('addOrderButton'),
       orderList: document.getElementById('orderList'),
       runButton: document.getElementById('runButton'),
-      resetButton: document.getElementById('resetButton'),
       vehicleSelect: document.getElementById('vehicleSelect'),
+      twoDStack: document.getElementById('twoDStack'),
+      visualEmpty: document.getElementById('visualEmpty'),
+      threeShell: document.getElementById('threeShell'),
+      threeCanvas: document.getElementById('threeCanvas'),
       pdfButton: document.getElementById('pdfButton'),
       vehicleBreakdown: document.getElementById('vehicleBreakdown'),
       resultMeta: document.getElementById('resultMeta'),
@@ -1198,9 +625,6 @@
       manualBox: document.getElementById('manualBox'),
       sequenceList: document.getElementById('sequenceList'),
       toast: document.getElementById('toast'),
-      vizEmpty: document.getElementById('vizEmpty'),
-      diagramSection: document.getElementById('diagramSection'),
-      vehicleTabs: document.getElementById('vehicleTabs')
     };
 
     function fmtInt(value) {
@@ -1262,49 +686,33 @@
       renderOrders();
     }
 
-    function resetSimulation() {
-      state.orders = [];
-      state.lastResult = null;
-      renderOrders();
-      
-      // 결과 초기화
-      elements.vehicleBreakdown.innerHTML = '';
-      elements.resultMeta.innerHTML = '';
-      elements.riskBadge.textContent = 'Pending';
-      elements.riskBadge.style.background = '#94a3b8';
-      elements.riskList.innerHTML = '';
-      elements.manualBox.textContent = '현장 매뉴얼이 여기에 표시됩니다.';
-      elements.manualBox.style.borderLeftColor = '#48BB78';
-      elements.sequenceList.innerHTML = '';
-      elements.pdfButton.disabled = true;
-      
-      // 시각화 초기화
-      if (VisualizerEngine.canvas) {
-        const ctx = VisualizerEngine.ctx;
-        ctx.clearRect(0, 0, VisualizerEngine.width, VisualizerEngine.height);
-        VisualizerEngine.items = [];
+    function renderVisualizations(vehicleSections) {
+      elements.twoDStack.innerHTML = '';
+      if (!vehicleSections.length) {
+        elements.visualEmpty.style.display = 'grid';
+        return;
       }
-      elements.vizEmpty.style.display = 'grid';
-      if (elements.vehicleSelect) {
-        elements.vehicleSelect.innerHTML = '<option value="auto">자동선택</option>';
-      }
-      
-      // 탭 초기화
-      elements.vehicleTabs.innerHTML = '';
-      elements.vehicleTabs.style.display = 'none';
-
-      showToast('입력 및 결과가 초기화되었습니다.');
-    }
-
-    /* renderDiagrams removed */
-
-    function renderVisualizations(payload) {
-      if (!VisualizerEngine.canvas) {
-        VisualizerEngine.init(payload);
-      } else {
-        VisualizerEngine.setData(payload);
-      }
-      elements.vizEmpty.style.display = 'none';
+      elements.visualEmpty.style.display = 'none';
+      vehicleSections.forEach((section) => {
+        const viz = section['시각화'] || {};
+        const card = document.createElement('section');
+        card.className = 'viz-card';
+        card.innerHTML = `
+          <header>
+            <div>
+              <h3 class="section-title">${section['인스턴스'] || section['차량']}</h3>
+              <p class="section-copy">${section['총중량']}kg · 팔레트 ${section['팔레트수']}</p>
+            </div>
+            <span class="badge" style="background:${riskColor(section['위험도'])}">${section['위험도']}</span>
+          </header>
+          <div class="content">
+            <div class="viz-main">${viz.floor_plan || ''}</div>
+            <div class="svg-card" style="margin-top:14px;">${viz.side_view || ''}</div>
+            <div class="svg-card" style="margin-top:14px;">${viz.weight_map || ''}</div>
+          </div>
+        `;
+        elements.twoDStack.appendChild(card);
+      });
     }
 
     function renderResults(payload) {
@@ -1372,39 +780,104 @@
           window.location.href = `/pdf/${payload.history_id}`;
         };
       }
-      renderVisualizations(payload);
-      renderVehicleTabs(payload);
+      renderVisualizations(payload.vehicle_sections || []);
+      buildThreeScene(payload.vehicle_sections || []);
     }
 
-    function renderVehicleTabs(payload) {
-      const vData = payload.visualizations || {};
-      const entries = Object.entries(vData);
-      
-      if (entries.length <= 1) {
-        elements.vehicleTabs.style.display = 'none';
+    function buildThreeScene(vehicleSections) {
+      elements.threeCanvas.innerHTML = '';
+      state.threeContext = null;
+      if (!vehicleSections.length || !window.THREE) {
         return;
       }
-      
-      elements.vehicleTabs.style.display = 'flex';
-      elements.vehicleTabs.innerHTML = '';
-      
-      entries.forEach(([vid, data], idx) => {
-        const tab = document.createElement('div');
-        tab.className = `v-tab ${idx === 0 ? 'active' : ''}`;
-        tab.textContent = vid;
-        tab.onclick = () => {
-          // 상세 3D 엔진 업데이트
-          VisualizerEngine.setData(data);
-          
-          // 탭 활성화 UI 처리
-          const tabs = elements.vehicleTabs.querySelectorAll('.v-tab');
-          tabs.forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          
-          showToast(`${vid} 시각화로 전환되었습니다.`);
-        };
-        elements.vehicleTabs.appendChild(tab);
+      const width = elements.threeCanvas.clientWidth || 900;
+      const height = elements.threeCanvas.clientHeight || 520;
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x1a1a2e);
+      const camera = new THREE.PerspectiveCamera(46, width / height, 0.1, 5000);
+      camera.position.set(15, 12, 15);
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(width, height);
+      elements.threeCanvas.appendChild(renderer.domElement);
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.target.set(4, 2, 1.5);
+      camera.lookAt(4, 2, 1.5);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      const light = new THREE.DirectionalLight(0xffffff, 0.8);
+      light.position.set(10, 20, 10);
+      scene.add(light);
+      const grid = new THREE.GridHelper(20, 20, 0xe2e8f0, 0xe2e8f0);
+      grid.position.set(4, 0.01, 1.5);
+      scene.add(grid);
+
+      let xOffset = 0;
+      vehicleSections.forEach((section) => {
+        const items = section['시각화']?.items || [];
+        const dims = section['시각화']?.vehicle || {};
+        const floorLength = Math.max((dims.length_mm || 6000) / 100, 40);
+        const floorWidth = Math.max((dims.width_mm || 2200) / 100, 18);
+        const floor = new THREE.Mesh(
+          new THREE.BoxGeometry(floorLength, 4, floorWidth),
+          new THREE.MeshPhongMaterial({ color: 0x294436, transparent: true, opacity: 0.45 })
+        );
+        floor.position.set(xOffset + floorLength / 2, 2, floorWidth / 2);
+        scene.add(floor);
+        const frame = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(floorLength, 40, floorWidth)),
+          new THREE.LineBasicMaterial({ color: 0xa7c4b1 })
+        );
+        frame.position.set(xOffset + floorLength / 2, 20, floorWidth / 2);
+        scene.add(frame);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0xe2e8f0 });
+        const points = [new THREE.Vector3(xOffset - 4, 0, 0), new THREE.Vector3(xOffset - 4, 28, 0)];
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), lineMat));
+
+        items.forEach((item) => {
+          const isSheet = item.unit === 'sheet';
+          const geometry = new THREE.BoxGeometry(isSheet ? 10 : 14, isSheet ? 4 : 11, isSheet ? 6 : 8);
+          const material = new THREE.MeshPhongMaterial({
+            color: isSheet ? 0x34d399 : (Number(item.layer || 1) > 1 ? 0x93c5fd : 0x1d4ed8),
+            transparent: true,
+            opacity: isSheet ? 0.7 : (Number(item.layer || 1) > 1 ? 0.85 : 1.0),
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.position.set(
+            xOffset + 8 + (Number(item.x || 0) / 100),
+            4 + (isSheet ? 2 : 5) + ((Number(item.layer || 1) - 1) * 14),
+            5 + (Number(item.y || 0) / 100)
+          );
+          scene.add(mesh);
+        });
+        scene.add(makeTextSprite('1층', xOffset - 5, 4, 0));
+        scene.add(makeTextSprite('2층', xOffset - 5, 18, 0));
+        xOffset += floorLength + 28;
       });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+      state.threeContext = { renderer, scene, camera, controls };
+    }
+
+    function makeTextSprite(text, x, y, z) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '24px Noto Sans KR';
+      ctx.fillText(text, 16, 38);
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+      sprite.position.set(x, y, z);
+      sprite.scale.set(2.4, 1.2, 1);
+      return sprite;
     }
 
     async function runSimulation() {
@@ -1439,36 +912,18 @@
 
     document.getElementById('addOrderButton').addEventListener('click', addOrder);
     document.getElementById('runButton').addEventListener('click', runSimulation);
-    document.getElementById('resetButton').addEventListener('click', resetSimulation);
     elements.quantityInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
         addOrder();
       }
     });
-    document.querySelectorAll('[data-action]').forEach(button => {
+    document.querySelectorAll('.view-tabs button').forEach((button) => {
       button.addEventListener('click', () => {
-        const { action, val } = button.dataset;
-        if (action === 'view') {
-          VisualizerEngine.view = val;
-          document.querySelectorAll('[data-action="view"]').forEach(btn => {
-            btn.classList.toggle('active', btn === button);
-            btn.style.color = btn === button ? '#fff' : 'rgba(255,255,255,0.6)';
-          });
-          const labelMap = { iso: 'ISO View', top: 'TOP View', side: 'SIDE View' };
-          document.getElementById('viz-label').textContent = labelMap[val];
-        } else if (action === 'toggle') {
-          if (val === 'risk') VisualizerEngine.showRisk = !VisualizerEngine.showRisk;
-          if (val === 'weight') VisualizerEngine.showWeight = !VisualizerEngine.showWeight;
-          button.classList.toggle('active');
-          button.style.color = button.classList.contains('active') ? '#fbbf24' : 'rgba(255,255,255,0.6)';
-        } else if (action === 'filter') {
-          VisualizerEngine.layerFilter = val;
-          document.querySelectorAll('[data-action="filter"]').forEach(btn => {
-            btn.classList.toggle('active', btn === button);
-            btn.style.color = btn === button ? '#fff' : 'rgba(255,255,255,0.6)';
-          });
-        }
+        document.querySelectorAll('.view-tabs button').forEach((node) => node.classList.toggle('active', node === button));
+        const mode = button.dataset.view;
+        elements.twoDStack.style.display = mode === '2d' ? 'grid' : 'none';
+        elements.threeShell.classList.toggle('active', mode === '3d');
       });
     });
     document.querySelectorAll('#mobileNav button').forEach((button) => {

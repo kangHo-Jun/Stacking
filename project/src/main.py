@@ -10,13 +10,9 @@ from risk_evaluator import evaluate_risk
 from vehicle_selector import select_optimal_vehicle
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2] # From project/src to repo root
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "data"
 OUTPUT_DIR = PROJECT_ROOT / "output"
-
-
-def _deviation_ratio_percent(first_weight: float, second_weight: float, total_weight: float) -> float:
-    return abs(first_weight - second_weight) / total_weight * 100
 
 
 def collect_orders() -> list[dict[str, object]]:

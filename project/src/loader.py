@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 from typing import Iterable
 
 
@@ -13,7 +12,6 @@ _PALLET_SHORT_MM = 900.0
 def _compute_floor_grid(
     cargo_length_mm: float,
     cargo_width_mm: float,
-    locked_direction: bool = False,
 ) -> tuple[int, int, float, float]:
     """실제 적재함 치수로 바닥 팔레트 배치 그리드 계산.
 
@@ -29,18 +27,9 @@ def _compute_floor_grid(
     cols2 = max(1, int(cargo_length_mm // _PALLET_SHORT_MM))
     rows2 = max(1, int(cargo_width_mm // _PALLET_LONG_MM))
 
-    # 방향고정=Y 인 경우 방향2(회전) 시뮬레이션 원천 차단
-    if locked_direction:
-        return cols1, rows1, _PALLET_LONG_MM, _PALLET_SHORT_MM
-
     if cols2 * rows2 > cols1 * rows1:
         return cols2, rows2, _PALLET_SHORT_MM, _PALLET_LONG_MM
     return cols1, rows1, _PALLET_LONG_MM, _PALLET_SHORT_MM
-
-
-_PROJECT_ROOT = Path(__file__).resolve().parents[2] # Go up to repo root
-DATA_DIR = _PROJECT_ROOT / "data"
-OUTPUT_DIR = _PROJECT_ROOT / "output"
 
 
 def _deviation_ratio_percent(first_weight: float, second_weight: float, total_weight: float) -> float:
@@ -53,18 +42,16 @@ def _make_pallets(order_items: Iterable[dict[str, object]]) -> list[dict[str, ob
     pallets: list[dict[str, object]] = []
 
     for item in order_items:
-        material_key = str(item.get("material_key", ""))
-        handling_grade = str(item.get("handling_grade", ""))
-        preferred_position = str(item.get("preferred_position", "하단"))
-        
         if "quantity" not in item or "pallet_capacity" not in item:
             pallet_count = max(int(item.get("pallet_count", 1)), 1)
             pallet_weight = float(item["total_weight_kg"]) / pallet_count
             pallet_volume = float(item.get("total_volume_m3", 0.0)) / pallet_count
+            handling_grade = str(item.get("handling_grade", ""))
+            preferred_position = str(item.get("preferred_position", "하단"))
             for pallet_index in range(pallet_count):
                 pallets.append(
                     {
-                        "material_key": material_key,
+                        "material_key": item.get("material_key", ""),
                         "handling_grade": handling_grade,
                         "preferred_position": preferred_position,
                         "weight_kg": pallet_weight,
@@ -73,8 +60,6 @@ def _make_pallets(order_items: Iterable[dict[str, object]]) -> list[dict[str, ob
                         "unit_type": "pallet",
                         "material_name": item.get("material_name", item.get("material_key", "")),
                         "sequence": pallet_index,
-                        "direction_locked": str(item.get("direction_locked", "N")),
-                        "mix_group": str(item.get("mix_group", "")),
                     }
                 )
             continue
@@ -83,13 +68,15 @@ def _make_pallets(order_items: Iterable[dict[str, object]]) -> list[dict[str, ob
         quantity = max(int(item.get("quantity", 0)), 0)
         unit_weight = float(item["total_weight_kg"]) / max(quantity, 1)
         unit_volume = float(item.get("total_volume_m3", 0.0)) / max(quantity, 1)
+        handling_grade = str(item.get("handling_grade", ""))
+        preferred_position = str(item.get("preferred_position", "하단"))
         full_pallets = quantity // pallet_capacity
         remainder = quantity % pallet_capacity
 
         for pallet_index in range(full_pallets):
             pallets.append(
                 {
-                    "material_key": material_key,
+                    "material_key": item.get("material_key", ""),
                     "handling_grade": handling_grade,
                     "preferred_position": preferred_position,
                     "weight_kg": unit_weight * pallet_capacity,
@@ -98,24 +85,20 @@ def _make_pallets(order_items: Iterable[dict[str, object]]) -> list[dict[str, ob
                     "unit_type": "pallet",
                     "material_name": item.get("material_name", item.get("material_key", "")),
                     "sequence": pallet_index,
-                    "direction_locked": str(item.get("direction_locked", "N")),
-                    "mix_group": str(item.get("mix_group", "")),
                 }
             )
         if remainder:
             pallets.append(
                 {
-                    "material_key": material_key,
+                    "material_key": item.get("material_key", ""),
                     "handling_grade": handling_grade,
                     "preferred_position": preferred_position,
                     "weight_kg": unit_weight * remainder,
                     "volume_m3": unit_volume * remainder,
                     "qty": remainder,
-                    "unit_type": "pallet",
+                    "unit_type": "sheet",
                     "material_name": item.get("material_name", item.get("material_key", "")),
                     "sequence": full_pallets,
-                    "direction_locked": str(item.get("direction_locked", "N")),
-                    "mix_group": str(item.get("mix_group", "")),
                 }
             )
 
@@ -134,88 +117,35 @@ def _plan_loading_from_pallets(selected_vehicle: dict[str, object], pallets: lis
 
     cargo_length_mm = float(selected_vehicle.get("cargo_length_mm", 10100.0))
     cargo_width_mm = float(selected_vehicle.get("cargo_width_mm", 2400.0))
-    
-    # 적재 품목 중 하나라도 방향고정이 "Y"인 경우 그리드 계산 시 반영
-    is_locked = any(str(p.get("direction_locked", "N")) == "Y" for p in ordered_pallets)
-
-    cols, rows, pallet_len, pallet_wid = _compute_floor_grid(cargo_length_mm, cargo_width_mm, locked_direction=is_locked)
+    cols, rows, pallet_len, pallet_wid = _compute_floor_grid(cargo_length_mm, cargo_width_mm)
     slots_per_layer = cols * rows
-
-    # 후면 여유 공간 계산
-    rear_space_mm = cargo_length_mm - (cols * pallet_len)
-    
-    # 배치 대상 분리
-    grid_pallets = ordered_pallets[:slots_per_layer]
-    overflow_pallets = ordered_pallets[slots_per_layer:]
-    
-    rear_entry_pallets = []
-    # 후면 배치 조건 확인 (장변이 폭 이내, 단변이 후면 여유공간 이내)
-    # 현재는 1개만 배치하는 기조(폭 중앙)로 설계
-    if overflow_pallets and rear_space_mm >= _PALLET_SHORT_MM:
-        candidate = overflow_pallets[0]
-        # 장변(1800)이 차량 폭 이내인지 확인
-        if _PALLET_LONG_MM <= cargo_width_mm:
-            rear_entry_pallets.append(candidate)
-            overflow_pallets = overflow_pallets[1:]
-
-    # 정렬 오프셋 결정 (후면 적재 시 전방 밀착)
-    if rear_entry_pallets:
-        x_offset = 0.0
-    else:
-        x_offset = (cargo_length_mm - (cols * pallet_len)) / 2
 
     placements: list[dict[str, object]] = []
 
-    # 1. 메인 그리드 및 상단 적재 (overflow 중 후면 미배치분 포함)
-    main_queue = grid_pallets + overflow_pallets
-    for index, pallet in enumerate(main_queue):
+    for index, pallet in enumerate(ordered_pallets):
+        # 바닥(1층) 슬롯 인덱스 — slots_per_layer 초과 시 2층
         floor_slot = index % slots_per_layer
         col = floor_slot // rows
         row = floor_slot % rows
 
-        x_mm = (col + 0.5) * pallet_len + x_offset
+        # 슬롯 중심 좌표
+        x_mm = (col + 0.5) * pallet_len
         y_mm = (row + 0.5) * pallet_wid
-        
-        layer = (index // slots_per_layer) + 1
-        
-        x_ratio = min(x_mm / cargo_length_mm, 1.0) if cargo_length_mm > 0 else 0.5
-        longitudinal = "front" if x_mm < (cargo_length_mm / 2) else "rear"
-        lateral = "left" if y_mm < (cargo_width_mm / 2) else "right"
-        vertical = "bottom" if layer == 1 else "top"
+        x_ratio = min(x_mm / cargo_length_mm, 1.0)
 
-        placements.append({
-            **pallet,
-            "col": col,
-            "row": row,
-            "layer": layer,
-            "x_mm": x_mm,
-            "y_mm": y_mm,
-            "longitudinal_zone": longitudinal,
-            "lateral_zone": lateral,
-            "vertical_zone": vertical,
-            "x_ratio": x_ratio,
-            "is_rear_entry": False
-        })
+        longitudinal = "front" if col < math.ceil(cols / 2) else "rear"
+        lateral = "left" if row < math.ceil(rows / 2) else "right"
+        vertical = "bottom" if index < slots_per_layer else "top"
 
-    # 2. 후면 진입 적재 (폭방향 배치)
-    for pallet in rear_entry_pallets:
-        x_mm = cargo_length_mm - (rear_space_mm / 2)
-        y_mm = cargo_width_mm / 2
-        x_ratio = min(x_mm / cargo_length_mm, 1.0) if cargo_length_mm > 0 else 0.5
-        
-        placements.append({
-            **pallet,
-            "col": cols, 
-            "row": rows // 2,
-            "layer": 1,
-            "x_mm": x_mm,
-            "y_mm": y_mm,
-            "longitudinal_zone": "rear",
-            "lateral_zone": "center",
-            "vertical_zone": "bottom",
-            "x_ratio": x_ratio,
-            "is_rear_entry": True
-        })
+        placements.append(
+            {
+                **pallet,
+                "longitudinal_zone": longitudinal,
+                "lateral_zone": lateral,
+                "vertical_zone": vertical,
+                "x_ratio": x_ratio,
+            }
+        )
 
     total_weight = sum(pallet["weight_kg"] for pallet in placements)
     front_weight = sum(pallet["weight_kg"] for pallet in placements if pallet["longitudinal_zone"] == "front")
@@ -223,12 +153,6 @@ def _plan_loading_from_pallets(selected_vehicle: dict[str, object], pallets: lis
     left_weight = sum(pallet["weight_kg"] for pallet in placements if pallet["lateral_zone"] == "left")
     right_weight = total_weight - left_weight
     top_weight = sum(pallet["weight_kg"] for pallet in placements if pallet["vertical_zone"] == "top")
-
-    front_weight = sum(p["weight_kg"] for p in placements if p["longitudinal_zone"] == "front")
-    rear_weight = total_weight - front_weight
-    left_weight = sum(p["weight_kg"] for p in placements if p["lateral_zone"] == "left")
-    right_weight = total_weight - left_weight
-    top_weight = sum(p["weight_kg"] for p in placements if p["vertical_zone"] == "top")
 
     front_rear_deviation_pct = _deviation_ratio_percent(front_weight, rear_weight, total_weight)
     left_right_deviation_pct = _deviation_ratio_percent(left_weight, right_weight, total_weight)
@@ -264,11 +188,6 @@ def _plan_loading_from_pallets(selected_vehicle: dict[str, object], pallets: lis
     weight_ratio_pct = (total_weight / max_weight_kg * 100) if max_weight_kg > 0 else 0.0
     volume_ratio_pct = (sum(pallet["volume_m3"] for pallet in placements) / cargo_volume_m3 * 100) if cargo_volume_m3 > 0 else 0.0
 
-    mix_groups = {str(p.get("mix_group", "")) for p in placements if p.get("mix_group")}
-    # 하드코딩된 혼적 불가 조합 (G1/G4, G1/G3)
-    mix_conflict_sets = [frozenset({"G1", "G4"}), frozenset({"G1", "G3"})]
-    mix_group_violation = any(c.issubset(mix_groups) for c in mix_conflict_sets)
-
     return {
         "selected_vehicle": selected_vehicle,
         "placements": placements,
@@ -281,7 +200,6 @@ def _plan_loading_from_pallets(selected_vehicle: dict[str, object], pallets: lis
         "front_rear_critical": front_rear_deviation_pct >= 35.0,
         "axle_loads_kg": axle_loads,
         "axle_overload_critical": axle_overload_critical,
-        "mix_group_violation": mix_group_violation,
         "top_below_bottom_violation": top_below_bottom_violation,
         "slots_per_layer": slots_per_layer,
         "floor_grid": {"cols": cols, "rows": rows},
